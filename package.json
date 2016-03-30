@@ -1,0 +1,34 @@
+{
+  "name": "send-action",
+  "version": "1.0.0",
+  "description": "simple state management",
+  "main": "index.js",
+  "scripts": {
+    "test": "standard && node test.js | tap-spec"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sethvincent/send-action.git"
+  },
+  "keywords": [
+    "state",
+    "store",
+    "redux"
+  ],
+  "author": "sethvincent",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/sethvincent/send-action/issues"
+  },
+  "homepage": "https://github.com/sethvincent/send-action#readme",
+  "dependencies": {
+    "xtend": "^4.0.1"
+  },
+  "devDependencies": {
+    "electron-prebuilt": "^0.37.2",
+    "standard": "^6.0.8",
+    "tap-spec": "^4.1.1",
+    "tape": "^4.5.1",
+    "testron": "^1.2.0"
+  }
+}
