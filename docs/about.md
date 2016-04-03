@@ -6,6 +6,10 @@ The API is significantly different from redux, but the pattern is similar.
 
 Using `send-action` you trigger actions, modify state based on those actions, and listen to the changes to render your application.
 
+## Source code
+- [GitHub repo](https://github.com/sethvincent/send-action)
+- [send-action on npm](http://npmjs.com/send-action)
+
 ## Install using npm
 
 ```

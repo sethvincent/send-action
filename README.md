@@ -1,6 +1,12 @@
 # send-action
 
-A simple state container.
+A simple state container. 
+
+[![npm](https://img.shields.io/npm/v/send-action.svg)](http://npmjs.com/send-action)
+
+## Resources
+- [Docs](http://sethvincent.com/send-action)
+- [Examples](https://github.com/sethvincent/send-action/tree/master/examples)
 
 ## Install
 
