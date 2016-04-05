@@ -12,7 +12,7 @@ Using `send-action` you trigger actions, modify state based on those actions, an
 
 ## Install using npm
 
-```
+```sh
 npm i --save send-action
 ```
 
