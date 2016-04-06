@@ -1,6 +1,6 @@
 {
   "name": "send-action",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "simple state management",
   "main": "index.js",
   "scripts": {

@@ -35,7 +35,7 @@ function onchange (action, state, oldState) {
 * Render the html of the app with yo-yo
 */
 function render (state) {
-  return yo`<div id="app">${state.value}</div>`
+  return div(state)
 }
 
 document.body.appendChild(render(send.state()))
@@ -49,4 +49,11 @@ send({ type: 'example', value: 'cool' })
 * Alternate `send` syntax
 */
 send('example', { value: 'awesome' })
+
+/*
+* Create a component to render
+*/
+function div (state) {
+  return yo`<div id="app">${state.value}</div>`
+}
 ```

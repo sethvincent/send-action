@@ -35,8 +35,7 @@ function onchange (action, state, oldState) {
 * Render the html of the app with yo-yo
 */
 function render (state) {
-  var div = el.div('#app', state.value)
-  return dom.render(div, appEl)
+  return dom.render(div(state), appEl)
 }
 
 /*
@@ -48,3 +47,12 @@ send({ type: 'example', value: 'cool' })
 * Alternate `send` syntax
 */
 send('example', { value: 'awesome' })
+
+/*
+* Create a component to render
+*/
+var div = react.createClass({
+  render: function () {
+    return react.createElement('div#app', this.props.value)
+  }
+})
