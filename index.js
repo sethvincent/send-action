@@ -10,7 +10,7 @@ module.exports = function sendAction (options) {
     if (typeof action === 'object') params = action
     else if (typeof action === 'string') params = extend({ type: action }, params)
 
-    var newState = options.onaction(params, state)
+    var newState = options.onaction(params, state, send)
     update(params, newState)
   }
 
