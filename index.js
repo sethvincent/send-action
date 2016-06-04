@@ -10,14 +10,14 @@ module.exports = function sendAction (options) {
     if (typeof action === 'object') params = action
     else if (typeof action === 'string') params = extend({ type: action }, params)
 
-    var newState = options.onaction(params, state, send)
-    update(params, newState)
+    var stateUpdates = options.onaction(params, state, send)
+    update(params, stateUpdates)
   }
 
-  function update (params, newState) {
+  function update (params, stateUpdates) {
     var oldState = state
-    state = extend(state, newState)
-    options.onchange(params, newState, oldState)
+    state = extend(state, stateUpdates)
+    options.onchange(params, state, oldState)
   }
 
   send.event = function sendAction_event (action, params, flag) {
