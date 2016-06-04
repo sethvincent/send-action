@@ -1,7 +1,6 @@
 var sendAction = require('send-action')
 var dom = require('react-dom')
 var react = require('react')
-var el = react.DOM
 
 /*
 * Create send function.
