@@ -82,3 +82,26 @@ test('onchange returns entire newState', function (t) {
   send({ value: 789 })
   t.end()
 })
+
+test('only call onchange if state actually changed', function (t) {
+  t.plan(1)
+
+  var send = sendAction({
+    state: {
+      value: 1
+    },
+    onaction: function modifier (action, state) {
+      if (action.type === 'change') {
+        return { value: action.value }
+      } else if (action.type === 'no-change') {
+        return state
+      }
+    },
+    onchange: function (params, newState, oldState) {
+      t.equal(newState.value, 2)
+    }
+  })
+
+  send('change', { value: 2 })
+  send('no-change')
+})

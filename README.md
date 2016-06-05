@@ -59,5 +59,8 @@ send('example', { value: 'cool' })
 - [react](/docs/react.md)
 - [virtual-dom](/docs/virtual-dom.md)
 
+## See also
+- [choo](https://github.com/yoshuawuyts/choo) - a frontend framework built from small modules, including `send-action`
+
 ## License
 [MIT](LICENSE.md)
