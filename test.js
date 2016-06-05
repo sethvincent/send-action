@@ -64,3 +64,21 @@ test('get state', function (t) {
   send({ type: 'example', example: false })
   t.end()
 })
+
+test('onchange returns entire newState', function (t) {
+  var send = sendAction({
+    state: {
+      a: 123,
+      b: 456
+    },
+    onaction: function modifier (action, state) {
+      return { b: action.value }
+    },
+    onchange: function (params, newState, oldState) {
+      t.ok(newState.a, 'state has no property "a"')
+    }
+  })
+
+  send({ value: 789 })
+  t.end()
+})
