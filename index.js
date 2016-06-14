@@ -7,13 +7,18 @@ module.exports = function sendAction (options) {
   var state = options.state || {}
 
   function send (action, params) {
-    if (typeof action === 'object') params = action
-    else if (typeof action === 'string') params = extend({ type: action }, params)
+    process.nextTick(function () {
+      if (typeof action === 'object') {
+        params = action
+      } else if (typeof action === 'string') {
+        params = extend({ type: action }, params)
+      }
 
-    var stateUpdates = options.onaction(params, state, send)
-    if (state !== stateUpdates) {
-      update(params, stateUpdates)
-    }
+      var stateUpdates = options.onaction(params, state, send)
+      if (state !== stateUpdates) {
+        update(params, stateUpdates)
+      }
+    })
   }
 
   function update (params, stateUpdates) {
