@@ -32,25 +32,57 @@ var sendAction = require('send-action')
 */
 var send = sendAction({
   onaction: function (action, state) {
-    // modify the state based on actions
-    return state
+    // return a new object based on the action
+    if (action.type === 'example') {
+      return { example: action.value }
+    }
   },
   onchange: function (action, state, oldstate) {
     // render your application
     console.log(action, state, oldstate)
   },
-  state: {}
+  state: {
+    example: null
+  }
 })
 
 /*
 * Send an action to the store
 */
-send({ type: 'example' value: 'cool' })
+send({ type: 'example' value: 'ok' })
 
 /*
 * Alternate `send` syntax
 */
 send('example', { value: 'cool' })
+```
+
+## Using send-action with xtend
+
+You may want to use a module like [xtend](http://npmjs.com/xtend) to create new objects by extending the existing state.
+
+```js
+var xtend = require('send-action')
+var sendAction = require('send-action')
+
+/*
+* Create send function.
+*/
+var send = sendAction({
+  onaction: function (action, state) {
+    // return a new object based on the action using xtend
+    if (action.type === 'example') {
+      return xtend(state, { example: action.value })
+    }
+  },
+  onchange: function (action, state, oldstate) {
+    // render your application
+    console.log(action, state, oldstate)
+  },
+  state: {
+    example: null
+  }
+})
 ```
 
 ## Examples with common UI modules
