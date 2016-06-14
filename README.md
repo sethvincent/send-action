@@ -62,7 +62,7 @@ send('example', { value: 'cool' })
 You may want to use a module like [xtend](http://npmjs.com/xtend) to create new objects by extending the existing state.
 
 ```js
-var xtend = require('send-action')
+var xtend = require('xtend')
 var sendAction = require('send-action')
 
 /*
