@@ -8,7 +8,7 @@
     "test:node": "node test.js | tap-spec",
     "test:testron": "browserify test.js | testron | tap-spec",
     "test": "npm run lint && npm run test:node && npm run test:testron",
-    "build:docs": "minidocs docs -c docs/content.json -o dist",
+    "build:docs": "minidocs docs -c docs/content.json -b /send-action -o dist",
     "deploy": "npm run build:docs && gh-pages -d dist"
   },
   "repository": {
