@@ -105,7 +105,6 @@ module.exports = function (params, state, send) {
   }
 
   function createMenu (contents) {
-    console.log('whatawhtahwhtahwtahwthahwthahwthahwthawhtahwthawt', contents)
     return contents.map(function (item) {
       // TODO: figure out a better way to get current page in state based on link click
       var current
