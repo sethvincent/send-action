@@ -4,29 +4,40 @@
 <title>send-action</title>
 <meta charset="utf-8">
 
-<link rel="stylesheet" href="/send-action/bundle.css">
+<link rel="stylesheet" href="/bundle.css">
 
 </head>
 <body>
 <div id="choo-root" class="minidocs">
-    <div class="_9d3a6acf minidocs-sidebar">
+    <div class="_8680596b minidocs-sidebar">
     <div class="minidocs-header">
-      <h1><a href="/send-action/">send-action</a></h1>
+      <h1><a href="/">send-action</a></h1>
     </div>
     <div class="minidocs-contents">
-      <div class="h1">overview</div><div><a href="/send-action/about" class="content-link ">about</a></div><div class="h1">examples</div><div><a href="/send-action/yo-yo" class="content-link active">yo-yo.js</a></div><div><a href="/send-action/virtual-dom" class="content-link ">virtual-dom</a></div><div><a href="/send-action/react" class="content-link ">react</a></div>
+      <div class="h1">overview</div><div>
+          <a href="/about" class="content-link active">about</a>
+        </div><div class="h1">examples</div><div>
+          <a href="/yo-yo" class="content-link ">yo-yo.js</a>
+        </div><div>
+          <a href="/virtual-dom" class="content-link ">virtual-dom</a>
+        </div><div>
+          <a href="/react" class="content-link ">react</a>
+        </div>
       <br />
       <br />
     </div>
   </div>
-    <div class="_af8ae1c9 minidocs-main">
+    <div class="_3b73b4b8 minidocs-main">
       <div class="markdown-body">
-        <div class="_b525f68d minidocs-content">
+        <div class="_b9d8e572 minidocs-content">
     
-    <div><h1 id="using-send-action-with-yo-yo-js">Using send-action with yo-yo.js</h1>
-<p>This example shows using send-action with <a href="https://github.com/maxogden/yo-yo">yo-yo.js</a></p>
-<pre><code class="lang-js"><span class="hljs-keyword">var</span> yo = <span class="hljs-built_in">require</span>(<span class="hljs-string">'yo-yo'</span>)
-<span class="hljs-keyword">var</span> sendAction = <span class="hljs-built_in">require</span>(<span class="hljs-string">'send-action'</span>)
+    
+    <div><h1 id="using-send-action-with-virtual-dom">Using send-action with virtual-dom</h1>
+<p>This example shows using send-action with <a href="http://npmjs.com/virtual-dom">virtual-dom</a> and <a href="http://npmjs.com/virtual-raf">virtual-raf</a>.</p>
+<pre><code class="lang-js"><span class="hljs-keyword">var</span> sendAction = <span class="hljs-built_in">require</span>(<span class="hljs-string">'send-action'</span>)
+<span class="hljs-keyword">var</span> vraf = <span class="hljs-built_in">require</span>(<span class="hljs-string">'virtual-raf'</span>)
+<span class="hljs-keyword">var</span> vdom = <span class="hljs-built_in">require</span>(<span class="hljs-string">'virtual-dom'</span>)
+<span class="hljs-keyword">var</span> h = <span class="hljs-built_in">require</span>(<span class="hljs-string">'virtual-dom/h'</span>)
 
 <span class="hljs-comment">/*
 * Create send function.
@@ -50,7 +61,7 @@
 * Subscribe to changes to the store for rendering &amp; logging
 */</span>
 <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">onchange</span> (<span class="hljs-params">action, state, oldState</span>) </span>{
-  yo.update(<span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'app'</span>), render(state))
+  tree.update(state)
 }
 
 <span class="hljs-comment">/*
@@ -60,7 +71,9 @@
   <span class="hljs-keyword">return</span> div(state)
 }
 
-<span class="hljs-built_in">document</span>.body.appendChild(render(send.state()))
+<span class="hljs-comment">/* initial render */</span>
+<span class="hljs-keyword">var</span> tree = vraf(send.state(), render, vdom)
+<span class="hljs-built_in">document</span>.body.appendChild(tree.render())
 
 <span class="hljs-comment">/*
 * Send an action to the store
@@ -76,7 +89,7 @@ send(<span class="hljs-string">'example'</span>, { value: <span class="hljs-stri
 * Create a component to render
 */</span>
 <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">div</span> (<span class="hljs-params">state</span>) </span>{
-  <span class="hljs-keyword">return</span> yo<span class="hljs-string">`&lt;div id="app"&gt;<span class="hljs-subst">${state.value}</span>&lt;/div&gt;`</span>
+  <span class="hljs-keyword">return</span> h(<span class="hljs-string">'div#app'</span>, state.value)
 }
 </code></pre>
 </div>
@@ -84,6 +97,6 @@ send(<span class="hljs-string">'example'</span>, { value: <span class="hljs-stri
       </div>
     </div>
   </div>
-<script src="/send-action/bundle.js"></script>
+<script src="/bundle.js"></script>
 </body>
 </html>
