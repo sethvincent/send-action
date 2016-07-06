@@ -92,7 +92,10 @@ var send = sendAction({
 - [virtual-dom](/docs/virtual-dom.md)
 
 ## See also
-- [choo](https://github.com/yoshuawuyts/choo) - a frontend framework built from small modules, including `send-action`
+- [choo](https://github.com/yoshuawuyts/choo)
+- [barracks](https://github.com/yoshuawuyts/barracks)
+- [nanoraf](https://github.com/yoshuawuyts/nanoraf)
+- [yo-yo](https://github.com/maxogden/yo-yo)
 
 ## License
 [MIT](LICENSE.md)
