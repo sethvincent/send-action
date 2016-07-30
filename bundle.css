@@ -1,4 +1,4 @@
-._f92e2882 a.markdown-link {
+._d706bf45 a.markdown-link {
       color: rgb(173,173,173);
       background: rgb(240,240,240);
       display: inline-block;
@@ -8,93 +8,79 @@
       text-decoration: none;
     }
 
-    ._f92e2882 a.markdown-link:hover {
+    ._d706bf45 a.markdown-link:hover {
       color: rgb(130,130,130);
       background: rgb(225,225,225);
     }
 
-    ._f92e2882 img.contributor {
+    ._d706bf45 img.contributor {
       border: none;
-      background: rgb(225,225,225);
-      width: 44px;
-      height: 44px;
-      margin-top: 3px;
+      vertical-align: top;
     }
 
-    ._f92e2882 div.contributor-wrapper {
-      background: rgb(225,225,225);
-      width: 50px;
-      height: 50px;
+    ._d706bf45 div.contributor-wrapper {
+      width: 30px;
+      height: 30px;
       display: inline-block;
       text-align: center;
       margin-right: 5px;
       opacity: 0.8;
       cursor: pointer;
+      border: 3px solid rgb(225, 225, 225);
     }
 
-    ._f92e2882 div.contributor-wrapper:hover {
+    ._d706bf45 div.contributor-wrapper:hover {
       background: rgb(205,205,205);
       opacity: 0.95;
     }
 
-    ._f92e2882 div.contributor-container {
-      width: 40%;
-      right: 12%;
+    ._d706bf45 div.contributor-container {
+      width: 60%;
+      right: 40px;
       margin-top: -50px;
-      position: absolute;
+      position: relative;
       display: inline-block;
       text-align: right;
-    }._3b73b4b8 {
-      width: 58%;
-      height: 529.5px;
-      padding: 125.9px 10% 70.6px 6%;
+      float: right;
+    }
+
+    @media (min-width: 600px) {
+      ._d706bf45 div.contributor-wrapper {
+        width: 50px;
+        height: 50px;
+      }
+      ._d706bf45 div.contributor-container {
+        right: 0px;
+      }
+    }._6781b8a1 {
+      width: 100%;
+      padding: 40px;
       vertical-align: top;
       display: inline-block;
-      margin-left: 24%;
-    }._8680596b {
-      width: 21%;
-      padding: 0px 20px 20px 35px;
-      display: inline-block;
-      padding-bottom: 3%;
-      overflow-y: scroll;
-      background: rgb(240,240,240);
-      height: 100%;
-      position: fixed;
-      top: 0;
-      bottom: 0;
+      box-sizing: border-box;
     }
 
-    ._8680596b .minidocs-logo {
-      width: 100%;
-      max-width: 250px;
+    @media (min-width: 600px) {
+      ._6781b8a1 {
+        position: absolute;
+        right: 0;
+        width: 73%;
+        padding: 125.9px 8% 70.6px 8%;
+        vertical-align: top;
+        display: inline-block;
+      }
     }
 
-    ._8680596b .minidocs-header {
-      height: 105px;
+    @media (min-width: 900px) {
+      ._6781b8a1 {
+        width: 77%;
+        padding: 125.9px 6% 70.6px 6%;
+      }
+    }._a7cc14da {
+
     }
 
-    ._8680596b .h1 {
-      display: block;
-      font-size: 2em;
-      font-weight: bold;
-      margin-top: 16px;
-      margin-bottom: 16px;
-    }
-
-    ._8680596b .h1:before {
-      content: '# '
-    }
-
-    ._8680596b h1 a {
-      color: #505050;
-      text-decoration: none;
-    }
-
-    ._8680596b h1 a:hover {
-      color: #222;
-    }
-
-    ._8680596b .h2 {
+    ._a7cc14da .h2 {
       display: block;
       font-size: 1.5em;
       font-weight: bold;
@@ -102,7 +88,29 @@
       margin-bottom: 12px;
     }
 
-    ._8680596b a.content-link {
+    ._a7cc14da .minidocs-menu, ._a7cc14da .minidocs-menu.menu-closed {
+      display: none;
+      z-index: 1000;
+    }
+
+    ._a7cc14da .minidocs-menu.menu-open.menu-small {
+      display: block;
+      background-color: rgb(240,240,240);
+      position: fixed;
+      width: 100%;
+      top: 0;
+      height: 100%;
+      padding: 50px;
+      margin-bottom:  0px;
+      box-sizing: border-box;
+    }
+
+    ._a7cc14da .minidocs-menu.menu-open.menu-small .minidocs-menu-wrapper {
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    ._a7cc14da a.content-link {
       padding: 2px 8px 2px 5px;
       margin-bottom: 1px;
       cursor: pointer;
@@ -112,9 +120,105 @@
       border-left: 3px solid #eee;
     }
 
-    ._8680596b a.content-link.active, ._8680596b a.content-link:hover {
+    ._a7cc14da a.content-link.active, ._a7cc14da a.content-link:hover {
       background-color: #fff;
       border-left: 3px solid rgb(200,200,200);
+    }
+
+    ._a7cc14da .minidocs-menu-toggle {
+      display: block;
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      border: 0px;
+      background: transparent;
+      padding-left: 20px;
+      line-height: 0.9;
+      z-index: 2000;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    ._a7cc14da .minidocs-menu-toggle:before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.25em;
+      width: 1em;
+      height: 0.15em;
+      background: black;
+      box-shadow: 
+        0 0.25em 0 0 black,
+        0 0.5em 0 0 black;
+    }
+
+    @media (min-width: 600px) {
+      ._a7cc14da .minidocs-menu {
+        display: block;
+      }
+
+      ._a7cc14da .minidocs-menu-toggle {
+        display: none;
+      }
+    }._68ad6959 {
+      width: 100%;
+    }
+
+    ._68ad6959 .minidocs-logo {
+      width: 100%;
+    }
+
+    ._68ad6959 .minidocs-header {
+      width: 40%;
+      max-width: 250px;
+      margin: 0px auto;
+    }
+
+    ._68ad6959 .h1 {
+      display: block;
+      font-size: 2em;
+      font-weight: bold;
+      margin-top: 16px;
+      margin-bottom: 16px;
+    }
+
+    ._68ad6959 .h1:before {
+      content: '# '
+    }
+
+    ._68ad6959 h1 a {
+      color: #505050;
+      text-decoration: none;
+    }
+
+    ._68ad6959 h1 a:hover {
+      color: #222;
+    }
+
+    @media (min-width: 600px) {
+      ._68ad6959 {
+        width: 21%;
+        padding: 0px 20px 20px 35px;
+        display: inline-block;
+        padding-bottom: 3%;
+        overflow-y: scroll;
+        background: rgb(240,240,240);
+        height: 100%;
+        position: fixed;
+        top: 0;
+        bottom: 0;
+      }
+
+      ._68ad6959 .minidocs-header {
+        width: 100%;
+        max-width: 250px;
+        margin: 0px auto;
+      }
+
+      ._68ad6959 .minidocs-logo {
+        width: 100%;
+        max-width: 250px;
+      }
     }body {
   font-family: 'clear_sans_thinregular';
   color: rgb(80,80,80);
