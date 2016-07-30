@@ -130,14 +130,7 @@ var content = require('./content')
 module.exports = function (state, prev, send) {
   var prefix = ((require('insert-css')("._6781b8a1 {\n      width: 100%;\n      padding: 40px;\n      vertical-align: top;\n      display: inline-block;\n      box-sizing: border-box;\n    }\n\n    @media (min-width: 600px) {\n      ._6781b8a1 {\n        position: absolute;\n        right: 0;\n        width: 73%;\n        padding: 125.9px 8% 70.6px 8%;\n        vertical-align: top;\n        display: inline-block;\n      }\n    }\n\n    @media (min-width: 900px) {\n      ._6781b8a1 {\n        width: 77%;\n        padding: 125.9px 6% 70.6px 6%;\n      }\n    }") || true) && "_6781b8a1")
 
-
-  function onload () {
-    if (typeof document !== 'undefined' && document.body.scrollTop > 0) {
-      document.body.scrollTop = 0
-    }
-  }
-
-  return html`<div id="choo-root" class="minidocs" onload=${onload}>
+  return html`<div id="choo-root" class="minidocs"}>
     ${sidebar(state, prev, send)}
     <div class="${prefix} minidocs-main">
       <div class="markdown-body">
@@ -173,10 +166,15 @@ module.exports = function (state, prev, send) {
         current = state.current
       }
 
+      function onclick (e) {
+        if (typeof document !== 'undefined' && document.body.scrollTop > 0) {
+          document.body.scrollTop = 0
+        }
+        send('menu:set', { open: false })
+      }
+
       if (item.link) {
-        return html`<div><a href="${item.link}" class="content-link ${isActive(current, item.key)}" onclick=${function (e) {
-          send('menu:set', { open: false })
-        }}>${item.name}</a></div>`
+        return html`<div><a href="${item.link}" class="content-link ${isActive(current, item.key)}" onclick=${onclick}>${item.name}</a></div>`
       }
 
       return html`<div class="h${item.depth}">${item.name}</div>`
