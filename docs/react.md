@@ -2,12 +2,12 @@
 
 This example shows using send-action with [react](http://npmjs.com/react).
 
+[![view on requirebin](http://requirebin.com/badge.png)](http://requirebin.com/?gist=8127eec940113306f6c511fd0d3148d1)
 
 ```js
 var sendAction = require('send-action')
 var dom = require('react-dom')
 var react = require('react')
-var el = react.DOM
 
 /*
 * Create send function.
@@ -38,10 +38,10 @@ function onchange (action, state, oldState) {
 }
 
 /*
-* Render the html of the app with yo-yo
+* Render the html of the app with react
 */
 function render (state) {
-  return dom.render(div(state), appEl)
+  return dom.render(react.createElement(div, state), appEl)
 }
 
 /*
@@ -59,7 +59,7 @@ send('example', { value: 'awesome' })
 */
 var div = react.createClass({
   render: function () {
-    return react.createElement('div#app', this.props.value)
+    return react.createElement('div', {}, this.props.value)
   }
 })
 ```

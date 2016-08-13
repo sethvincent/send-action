@@ -1,6 +1,8 @@
 # Using send-action with yo-yo.js
 
-This example shows using send-action with [yo-yo.js](https://github.com/maxogden/yo-yo)
+This example shows using send-action with [yo-yo.js](https://github.com/maxogden/yo-yo).
+
+[![view on requirebin](http://requirebin.com/badge.png)](http://requirebin.com/?gist=a78a13e2b8ee24835665537aa94a9685)
 
 ```js
 var yo = require('yo-yo')
