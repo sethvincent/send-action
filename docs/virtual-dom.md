@@ -2,6 +2,8 @@
 
 This example shows using send-action with [virtual-dom](http://npmjs.com/virtual-dom) and [virtual-raf](http://npmjs.com/virtual-raf).
 
+[![view on requirebin](http://requirebin.com/badge.png)](http://requirebin.com/?gist=10bb9ef42774c3fdbaa07b3e53582abe)
+
 ```js
 var sendAction = require('send-action')
 var vraf = require('virtual-raf')
@@ -34,7 +36,7 @@ function onchange (action, state, oldState) {
 }
 
 /*
-* Render the html of the app with yo-yo
+* Render the html of the app with virtual-dom
 */
 function render (state) {
   return div(state)

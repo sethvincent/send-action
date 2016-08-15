@@ -29,7 +29,7 @@ function onchange (action, state, oldState) {
 }
 
 /*
-* Render the html of the app with yo-yo
+* Render the html of the app with virtual-dom
 */
 function render (state) {
   return div(state)

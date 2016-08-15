@@ -31,10 +31,10 @@ function onchange (action, state, oldState) {
 }
 
 /*
-* Render the html of the app with yo-yo
+* Render the html of the app with react
 */
 function render (state) {
-  return dom.render(div(state), appEl)
+  return dom.render(react.createElement(div, state), appEl)
 }
 
 /*
@@ -52,6 +52,6 @@ send('example', { value: 'awesome' })
 */
 var div = react.createClass({
   render: function () {
-    return react.createElement('div#app', this.props.value)
+    return react.createElement('div', {}, this.props.value)
   }
 })
