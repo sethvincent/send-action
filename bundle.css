@@ -76,11 +76,11 @@
         width: 77%;
         padding: 125.9px 6% 70.6px 6%;
       }
-    }._a7cc14da {
+    }._df8df972 {
 
     }
 
-    ._a7cc14da .h2 {
+    ._df8df972 .h2 {
       display: block;
       font-size: 1.5em;
       font-weight: bold;
@@ -88,12 +88,12 @@
       margin-bottom: 12px;
     }
 
-    ._a7cc14da .minidocs-menu, ._a7cc14da .minidocs-menu.menu-closed {
+    ._df8df972 .minidocs-menu, ._df8df972 .minidocs-menu.menu-closed {
       display: none;
       z-index: 1000;
     }
 
-    ._a7cc14da .minidocs-menu.menu-open.menu-small {
+    ._df8df972 .minidocs-menu.menu-open.menu-small {
       display: block;
       background-color: rgb(240,240,240);
       position: fixed;
@@ -105,12 +105,12 @@
       box-sizing: border-box;
     }
 
-    ._a7cc14da .minidocs-menu.menu-open.menu-small .minidocs-menu-wrapper {
+    ._df8df972 .minidocs-menu.menu-open.menu-small .minidocs-menu-wrapper {
       height: 100%;
       overflow-y: auto;
     }
 
-    ._a7cc14da a.content-link {
+    ._df8df972 a.content-link {
       padding: 2px 8px 2px 5px;
       margin-bottom: 1px;
       cursor: pointer;
@@ -120,12 +120,12 @@
       border-left: 3px solid #eee;
     }
 
-    ._a7cc14da a.content-link.active, ._a7cc14da a.content-link:hover {
+    ._df8df972 a.content-link.active, ._df8df972 a.content-link:hover {
       background-color: #fff;
       border-left: 3px solid rgb(200,200,200);
     }
 
-    ._a7cc14da .minidocs-menu-toggle {
+    ._df8df972 .minidocs-menu-toggle {
       display: block;
       position: absolute;
       top: 10px;
@@ -139,7 +139,7 @@
       font-size: 16px;
     }
 
-    ._a7cc14da .minidocs-menu-toggle:before {
+    ._df8df972 .minidocs-menu-toggle:before {
       content: "";
       position: absolute;
       left: 0;
@@ -153,11 +153,12 @@
     }
 
     @media (min-width: 600px) {
-      ._a7cc14da .minidocs-menu {
+      ._df8df972 .minidocs-menu {
         display: block;
+        margin-bottom: 25px;
       }
 
-      ._a7cc14da .minidocs-menu-toggle {
+      ._df8df972 .minidocs-menu-toggle {
         display: none;
       }
     }._68ad6959 {
