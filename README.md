@@ -49,7 +49,7 @@ var send = sendAction({
 /*
 * Send an action to the store
 */
-send({ type: 'example' value: 'ok' })
+send({ type: 'example', value: 'ok' })
 
 /*
 * Alternate `send` syntax
