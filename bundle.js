@@ -148,7 +148,7 @@ module.exports = function (state, prev, send) {
   </div>`
 }
 
-},{"choo/html":20,"github-avatar-url":32,"insert-css":51}],3:[function(require,module,exports){
+},{"choo/html":20,"github-avatar-url":33,"insert-css":52}],3:[function(require,module,exports){
 var html = require('choo/html')
 var css = 0
 var sidebar = require('./sidebar')
@@ -167,7 +167,7 @@ module.exports = function (state, prev, send) {
   </div>`
 }
 
-},{"./content":2,"./sidebar":5,"choo/html":20,"insert-css":51}],4:[function(require,module,exports){
+},{"./content":2,"./sidebar":5,"choo/html":20,"insert-css":52}],4:[function(require,module,exports){
 var url = require('url')
 var css = 0
 var html = require('choo/html')
@@ -227,7 +227,7 @@ module.exports = function (state, prev, send) {
   </div>`
 }
 
-},{"choo/html":20,"insert-css":51,"url":112}],5:[function(require,module,exports){
+},{"choo/html":20,"insert-css":52,"url":113}],5:[function(require,module,exports){
 var css = 0
 var html = require('choo/html')
 
@@ -253,7 +253,7 @@ module.exports = function (state, prev, send) {
   </div>`
 }
 
-},{"./menu":4,"choo/html":20,"insert-css":51}],6:[function(require,module,exports){
+},{"./menu":4,"choo/html":20,"insert-css":52}],6:[function(require,module,exports){
 var css = 0
 
 var minidocs = require('./app')
@@ -280,7 +280,7 @@ module.exports = function (opts, callback) {
   }
 }
 
-},{"./app":1,"insert-css":51}],7:[function(require,module,exports){
+},{"./app":1,"insert-css":52}],7:[function(require,module,exports){
 // http://wiki.commonjs.org/wiki/Unit_Testing/1.0
 //
 // THIS IS NOT TESTED NOR LIKELY TO WORK OUTSIDE V8!
@@ -641,7 +641,7 @@ var objectKeys = Object.keys || function (obj) {
   return keys;
 };
 
-},{"util/":116}],8:[function(require,module,exports){
+},{"util/":118}],8:[function(require,module,exports){
 module.exports = applyHook
 
 // apply arguments onto an array of functions, useful for hooks
@@ -671,7 +671,12 @@ function dispatcher (hooks) {
   const onActionHooks = []
   const onErrorHooks = []
 
-  useHooks(hooks)
+  const subscriptionWraps = []
+  const initialStateWraps = []
+  const reducerWraps = []
+  const effectWraps = []
+
+  use(hooks)
 
   var reducersCalled = false
   var effectsCalled = false
@@ -687,20 +692,24 @@ function dispatcher (hooks) {
   start.model = setModel
   start.state = getState
   start.start = start
-  start.use = useHooks
+  start.use = use
   return start
 
   // push an object of hooks onto an array
   // obj -> null
-  function useHooks (hooks) {
+  function use (hooks) {
     assert.equal(typeof hooks, 'object', 'barracks.use: hooks should be an object')
     assert.ok(!hooks.onError || typeof hooks.onError === 'function', 'barracks.use: onError should be undefined or a function')
     assert.ok(!hooks.onAction || typeof hooks.onAction === 'function', 'barracks.use: onAction should be undefined or a function')
     assert.ok(!hooks.onStateChange || typeof hooks.onStateChange === 'function', 'barracks.use: onStateChange should be undefined or a function')
 
+    if (hooks.onStateChange) onStateChangeHooks.push(hooks.onStateChange)
     if (hooks.onError) onErrorHooks.push(wrapOnError(hooks.onError))
     if (hooks.onAction) onActionHooks.push(hooks.onAction)
-    if (hooks.onStateChange) onStateChangeHooks.push(hooks.onStateChange)
+    if (hooks.wrapSubscriptions) subscriptionWraps.push(hooks.wrapSubscriptions)
+    if (hooks.wrapInitialState) initialStateWraps.push(hooks.wrapInitialState)
+    if (hooks.wrapReducers) reducerWraps.push(hooks.wrapReducers)
+    if (hooks.wrapEffects) effectWraps.push(hooks.wrapEffects)
   }
 
   // push a model to be initiated
@@ -715,26 +724,42 @@ function dispatcher (hooks) {
   function getState (opts) {
     opts = opts || {}
     assert.equal(typeof opts, 'object', 'barracks.store.state: opts should be an object')
-    if (opts.state) {
-      const initialState = {}
-      const nsState = {}
-      models.forEach(function (model) {
-        const ns = model.namespace
-        const modelState = model.state || {}
-        if (ns) {
-          nsState[ns] = {}
-          apply(ns, modelState, nsState)
-          nsState[ns] = xtend(nsState[ns], opts.state[ns])
-        } else {
-          apply(model.namespace, modelState, initialState)
-        }
-      })
-      return xtend(_state, xtend(opts.state, nsState))
-    } else if (opts.freeze === false) {
-      return xtend(_state)
-    } else {
-      return Object.freeze(xtend(_state))
-    }
+
+    const state = opts.state
+    if (!opts.state && opts.freeze === false) return xtend(_state)
+    else if (!opts.state) return Object.freeze(xtend(_state))
+    assert.equal(typeof state, 'object', 'barracks.store.state: state should be an object')
+
+    const namespaces = []
+    const newState = {}
+
+    // apply all fields from the model, and namespaced fields from the passed
+    // in state
+    models.forEach(function (model) {
+      const ns = model.namespace
+      namespaces.push(ns)
+      const modelState = model.state || {}
+      if (ns) {
+        newState[ns] = newState[ns] || {}
+        apply(ns, modelState, newState)
+        newState[ns] = xtend(newState[ns], state[ns])
+      } else {
+        mutate(newState, modelState)
+      }
+    })
+
+    // now apply all fields that weren't namespaced from the passed in state
+    Object.keys(state).forEach(function (key) {
+      if (namespaces.indexOf(key) !== -1) return
+      newState[key] = state[key]
+    })
+
+    const tmpState = xtend(_state, xtend(state, newState))
+    const wrappedState = wrapHook(tmpState, initialStateWraps)
+
+    return (opts.freeze === false)
+      ? wrappedState
+      : Object.freeze(wrappedState)
   }
 
   // initialize the store hooks, get the send() function
@@ -747,25 +772,46 @@ function dispatcher (hooks) {
     models.forEach(function (model) {
       const ns = model.namespace
       if (!stateCalled && model.state && opts.state !== false) {
-        apply(ns, model.state, _state)
+        const modelState = model.state || {}
+        if (ns) {
+          _state[ns] = _state[ns] || {}
+          apply(ns, modelState, _state)
+        } else {
+          mutate(_state, modelState)
+        }
       }
       if (!reducersCalled && model.reducers && opts.reducers !== false) {
-        apply(ns, model.reducers, reducers)
+        apply(ns, model.reducers, reducers, function (cb) {
+          return wrapHook(cb, reducerWraps)
+        })
       }
       if (!effectsCalled && model.effects && opts.effects !== false) {
-        apply(ns, model.effects, effects)
+        apply(ns, model.effects, effects, function (cb) {
+          return wrapHook(cb, effectWraps)
+        })
       }
       if (!subsCalled && model.subscriptions && opts.subscriptions !== false) {
-        apply(ns, model.subscriptions, subscriptions, createSend, function (err) {
-          applyHook(onErrorHooks, err)
+        apply(ns, model.subscriptions, subscriptions, function (cb, key) {
+          const send = createSend('subscription: ' + (ns ? ns + ':' + key : key))
+          cb = wrapHook(cb, subscriptionWraps)
+          cb(send, function (err) {
+            applyHook(onErrorHooks, err, _state, createSend)
+          })
+          return cb
         })
       }
     })
 
-    if (!opts.noState) stateCalled = true
+    // the state wrap is special because we want to operate on the full
+    // state rather than indvidual chunks, so we apply it outside the loop
+    if (!stateCalled && opts.state !== false) {
+      _state = wrapHook(_state, initialStateWraps)
+    }
+
+    if (!opts.noSubscriptions) subsCalled = true
     if (!opts.noReducers) reducersCalled = true
     if (!opts.noEffects) effectsCalled = true
-    if (!opts.noSubscriptions) subsCalled = true
+    if (!opts.noState) stateCalled = true
 
     if (!onErrorHooks.length) onErrorHooks.push(wrapOnError(defaultOnError))
 
@@ -842,7 +888,7 @@ function dispatcher (hooks) {
             applyHook(onStateChangeHooks, data, newState, _state, actionName, createSend)
           }
           _state = newState
-          cb()
+          cb(null, newState)
         }
 
         const _effects = ns ? effects[ns] : effects
@@ -865,18 +911,12 @@ function dispatcher (hooks) {
 // optionally contains a namespace
 // which is used to nest properties.
 // (str, obj, obj, fn?) -> null
-function apply (ns, source, target, createSend, done) {
+function apply (ns, source, target, wrap) {
   if (ns && !target[ns]) target[ns] = {}
   Object.keys(source).forEach(function (key) {
-    if (ns) {
-      target[ns][key] = source[key]
-    } else {
-      target[key] = source[key]
-    }
-    if (createSend && done) {
-      const send = createSend('subscription: ' + (ns ? ns + ':' + key : key))
-      source[key](send, done)
-    }
+    const cb = wrap ? wrap(source[key], key) : source[key]
+    if (ns) target[ns][key] = cb
+    else target[key] = cb
   })
 }
 
@@ -887,12 +927,22 @@ function defaultOnError (err) {
 }
 
 function wrapOnError (onError) {
-  return function onErrorWrap (err) {
-    if (err) onError(err)
+  return function onErrorWrap (err, state, createSend) {
+    if (err) onError(err, state, createSend)
   }
 }
 
-},{"./apply-hook":8,"assert":7,"xtend":120,"xtend/mutable":121}],10:[function(require,module,exports){
+// take a apply an array of transforms onto a value. The new value
+// must be returned synchronously from the transform
+// (any, [fn]) -> any
+function wrapHook (value, transforms) {
+  transforms.forEach(function (transform) {
+    value = transform(value)
+  })
+  return value
+}
+
+},{"./apply-hook":8,"assert":7,"xtend":122,"xtend/mutable":123}],10:[function(require,module,exports){
 'use strict'
 
 exports.toByteArray = toByteArray
@@ -1145,7 +1195,7 @@ function belCreateElement (tag, props, children) {
 module.exports = hyperx(belCreateElement)
 module.exports.createElement = belCreateElement
 
-},{"global/document":38,"hyperx":45,"on-load":65}],12:[function(require,module,exports){
+},{"global/document":39,"hyperx":46,"on-load":66}],12:[function(require,module,exports){
 
 },{}],13:[function(require,module,exports){
 (function (process,Buffer){
@@ -2001,7 +2051,7 @@ util.inherits(InflateRaw, Zlib);
 util.inherits(Unzip, Zlib);
 
 }).call(this,require('_process'),require("buffer").Buffer)
-},{"./binding":13,"_process":86,"_stream_transform":98,"assert":7,"buffer":17,"util":116}],15:[function(require,module,exports){
+},{"./binding":13,"_process":86,"_stream_transform":99,"assert":7,"buffer":17,"util":118}],15:[function(require,module,exports){
 arguments[4][12][0].apply(exports,arguments)
 },{"dup":12}],16:[function(require,module,exports){
 (function (global){
@@ -2284,6 +2334,8 @@ if (Buffer.TYPED_ARRAY_SUPPORT) {
 function assertSize (size) {
   if (typeof size !== 'number') {
     throw new TypeError('"size" argument must be a number')
+  } else if (size < 0) {
+    throw new RangeError('"size" argument must not be negative')
   }
 }
 
@@ -2360,7 +2412,7 @@ function fromString (that, string, encoding) {
 }
 
 function fromArrayLike (that, array) {
-  var length = checked(array.length) | 0
+  var length = array.length < 0 ? 0 : checked(array.length) | 0
   that = createBuffer(that, length)
   for (var i = 0; i < length; i += 1) {
     that[i] = array[i] & 255
@@ -2429,7 +2481,7 @@ function fromObject (that, obj) {
 }
 
 function checked (length) {
-  // Note: cannot use `length < kMaxLength` here because that fails when
+  // Note: cannot use `length < kMaxLength()` here because that fails when
   // length is NaN (which is otherwise coerced to zero.)
   if (length >= kMaxLength()) {
     throw new RangeError('Attempt to allocate Buffer larger than maximum ' +
@@ -3906,7 +3958,7 @@ function isnan (val) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"base64-js":10,"ieee754":46,"isarray":58}],18:[function(require,module,exports){
+},{"base64-js":10,"ieee754":47,"isarray":59}],18:[function(require,module,exports){
 module.exports = {
   "100": "Continue",
   "101": "Switching Protocols",
@@ -3994,7 +4046,7 @@ module.exports = Error.captureStackTrace || function (error) {
 },{}],20:[function(require,module,exports){
 module.exports = require('yo-yo')
 
-},{"yo-yo":122}],21:[function(require,module,exports){
+},{"yo-yo":124}],21:[function(require,module,exports){
 const history = require('sheet-router/history')
 const sheetRouter = require('sheet-router')
 const document = require('global/document')
@@ -4116,7 +4168,7 @@ function choo (opts) {
   // create a new router with a custom `createRoute()` function
   // (str?, obj, fn?) -> null
   function createRouter (defaultRoute, routes, createSend) {
-    var prev = {}
+    var prev = { params: {} }
     return sheetRouter(defaultRoute, routes, createRoute)
 
     function createRoute (routeFn) {
@@ -4182,7 +4234,7 @@ function appInit (opts) {
   }
 }
 
-},{"assert":7,"barracks":9,"document-ready":24,"global/document":38,"hash-match":42,"nanoraf":61,"sheet-router":102,"sheet-router/hash":99,"sheet-router/history":100,"sheet-router/href":101,"xtend":120,"yo-yo":122}],22:[function(require,module,exports){
+},{"assert":7,"barracks":9,"document-ready":24,"global/document":39,"hash-match":43,"nanoraf":62,"sheet-router":103,"sheet-router/hash":100,"sheet-router/history":101,"sheet-router/href":102,"xtend":122,"yo-yo":124}],22:[function(require,module,exports){
 (function (Buffer){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -4293,7 +4345,7 @@ function objectToString(o) {
 }
 
 }).call(this,{"isBuffer":require("../../is-buffer/index.js")})
-},{"../../is-buffer/index.js":53}],23:[function(require,module,exports){
+},{"../../is-buffer/index.js":54}],23:[function(require,module,exports){
 'use strict';
 var captureStackTrace = require('capture-stack-trace');
 
@@ -4347,7 +4399,8 @@ var document = require('global/document')
 module.exports = document.addEventListener ? ready : noop
 
 function ready (callback) {
-  if (document.readyState === 'complete') {
+  var state = document.readyState
+  if (state === 'complete' || state === 'interactive') {
     return setTimeout(callback, 0)
   }
 
@@ -4358,7 +4411,7 @@ function ready (callback) {
 
 function noop () {}
 
-},{"global/document":38}],25:[function(require,module,exports){
+},{"global/document":39}],25:[function(require,module,exports){
 "use strict";
 
 var stream = require("readable-stream");
@@ -4436,7 +4489,7 @@ module.exports = function duplex2(options, writable, readable) {
 
 module.exports.DuplexWrapper = DuplexWrapper;
 
-},{"readable-stream":97}],26:[function(require,module,exports){
+},{"readable-stream":98}],26:[function(require,module,exports){
 (function (process,Buffer){
 var stream = require('readable-stream')
 var eos = require('end-of-stream')
@@ -4667,7 +4720,7 @@ Duplexify.prototype.end = function(data, enc, cb) {
 module.exports = Duplexify
 
 }).call(this,require('_process'),require("buffer").Buffer)
-},{"_process":86,"buffer":17,"end-of-stream":28,"inherits":50,"readable-stream":97,"stream-shift":107}],27:[function(require,module,exports){
+},{"_process":86,"buffer":17,"end-of-stream":28,"inherits":51,"readable-stream":98,"stream-shift":108}],27:[function(require,module,exports){
 'use strict';
 module.exports = function (opts) {
 	opts = opts || {};
@@ -4748,7 +4801,30 @@ var eos = function(stream, opts, callback) {
 };
 
 module.exports = eos;
-},{"once":66}],29:[function(require,module,exports){
+},{"once":29}],29:[function(require,module,exports){
+var wrappy = require('wrappy')
+module.exports = wrappy(once)
+
+once.proto = once(function () {
+  Object.defineProperty(Function.prototype, 'once', {
+    value: function () {
+      return once(this)
+    },
+    configurable: true
+  })
+})
+
+function once (fn) {
+  var f = function () {
+    if (f.called) return f.value
+    f.called = true
+    return f.value = fn.apply(this, arguments)
+  }
+  f.called = false
+  return f
+}
+
+},{"wrappy":121}],30:[function(require,module,exports){
 'use strict';
 
 var util = require('util');
@@ -4865,7 +4941,7 @@ errorEx.line = function (str, def) {
 
 module.exports = errorEx;
 
-},{"is-arrayish":52,"util":116}],30:[function(require,module,exports){
+},{"is-arrayish":53,"util":118}],31:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -5169,7 +5245,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 (function (process){
 'use strict';
 var got = require('got');
@@ -5226,7 +5302,7 @@ function ghGot(path, opts, cb) {
 module.exports = ghGot;
 
 }).call(this,require('_process'))
-},{"_process":86,"got":40,"object-assign":64}],32:[function(require,module,exports){
+},{"_process":86,"got":41,"object-assign":65}],33:[function(require,module,exports){
 'use strict';
 var emailRegex = require('email-regex');
 var githubUsername= require('github-username');
@@ -5255,7 +5331,7 @@ module.exports = function (str, token, cb) {
 	
 };
 
-},{"email-regex":27,"gh-got":31,"github-username":33}],33:[function(require,module,exports){
+},{"email-regex":27,"gh-got":32,"github-username":34}],34:[function(require,module,exports){
 'use strict';
 var ghGot = require('gh-got');
 
@@ -5289,7 +5365,7 @@ module.exports = function (email, token, cb) {
 	}).catch(cb);
 };
 
-},{"gh-got":34}],34:[function(require,module,exports){
+},{"gh-got":35}],35:[function(require,module,exports){
 (function (process){
 'use strict';
 var got = require('got');
@@ -5358,7 +5434,7 @@ helpers.forEach(function (el) {
 module.exports = ghGot;
 
 }).call(this,require('_process'))
-},{"_process":86,"got":35,"object-assign":37,"pinkie-promise":82}],35:[function(require,module,exports){
+},{"_process":86,"got":36,"object-assign":38,"pinkie-promise":82}],36:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 
@@ -5754,7 +5830,7 @@ got.MaxRedirectsError = createErrorClass('MaxRedirectsError', function (statusCo
 module.exports = got;
 
 }).call(this,require("buffer").Buffer)
-},{"./package.json":36,"buffer":17,"create-error-class":23,"duplexer2":25,"events":30,"http":103,"https":43,"is-plain-obj":54,"is-redirect":55,"is-retry-allowed":56,"is-stream":57,"lowercase-keys":59,"node-status-codes":63,"object-assign":37,"parse-json":78,"pinkie-promise":82,"querystring":90,"read-all-stream":91,"readable-stream":97,"timed-out":109,"unzip-response":12,"url":112,"url-parse-lax":111}],36:[function(require,module,exports){
+},{"./package.json":37,"buffer":17,"create-error-class":23,"duplexer2":25,"events":31,"http":104,"https":44,"is-plain-obj":55,"is-redirect":56,"is-retry-allowed":57,"is-stream":58,"lowercase-keys":60,"node-status-codes":64,"object-assign":38,"parse-json":78,"pinkie-promise":82,"querystring":90,"read-all-stream":91,"readable-stream":98,"timed-out":110,"unzip-response":12,"url":113,"url-parse-lax":112}],37:[function(require,module,exports){
 module.exports={
   "_args": [
     [
@@ -5901,7 +5977,7 @@ module.exports={
   }
 }
 
-},{}],37:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 'use strict';
 /* eslint-disable no-unused-vars */
 var hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -5986,7 +6062,7 @@ module.exports = shouldUseNative() ? Object.assign : function (target, source) {
 	return to;
 };
 
-},{}],38:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 (function (global){
 var topLevel = typeof global !== 'undefined' ? global :
     typeof window !== 'undefined' ? window : {}
@@ -6005,7 +6081,7 @@ if (typeof document !== 'undefined') {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"min-document":12}],39:[function(require,module,exports){
+},{"min-document":12}],40:[function(require,module,exports){
 (function (global){
 if (typeof window !== "undefined") {
     module.exports = window;
@@ -6018,7 +6094,7 @@ if (typeof window !== "undefined") {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],40:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 (function (process,Buffer){
 'use strict';
 var http = require('http');
@@ -6298,7 +6374,7 @@ function got(url, opts, cb) {
 module.exports = got;
 
 }).call(this,require('_process'),require("buffer").Buffer)
-},{"_process":86,"buffer":17,"duplexify":26,"http":103,"https":43,"infinity-agent":49,"is-redirect":55,"is-stream":57,"lowercase-keys":59,"nested-error-stacks":62,"object-assign":41,"prepend-http":84,"querystring":90,"read-all-stream":91,"timed-out":109,"url":112,"util":116,"zlib":14}],41:[function(require,module,exports){
+},{"_process":86,"buffer":17,"duplexify":26,"http":104,"https":44,"infinity-agent":50,"is-redirect":56,"is-stream":58,"lowercase-keys":60,"nested-error-stacks":63,"object-assign":42,"prepend-http":84,"querystring":90,"read-all-stream":91,"timed-out":110,"url":113,"util":118,"zlib":14}],42:[function(require,module,exports){
 'use strict';
 var propIsEnumerable = Object.prototype.propertyIsEnumerable;
 
@@ -6339,7 +6415,7 @@ module.exports = Object.assign || function (target, source) {
 	return to;
 };
 
-},{}],42:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 module.exports = function hashMatch (hash, prefix) {
   var pre = prefix || '/';
   if (hash.length === 0) return pre;
@@ -6350,7 +6426,7 @@ module.exports = function hashMatch (hash, prefix) {
   else return hash.replace(pre, '');
 }
 
-},{}],43:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 var http = require('http');
 
 var https = module.exports;
@@ -6366,7 +6442,7 @@ https.request = function (params, cb) {
     return http.request.call(this, params, cb);
 }
 
-},{"http":103}],44:[function(require,module,exports){
+},{"http":104}],45:[function(require,module,exports){
 module.exports = attributeToProperty
 
 var transform = {
@@ -6387,7 +6463,7 @@ function attributeToProperty (h) {
   }
 }
 
-},{}],45:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 var attrToProp = require('hyperscript-attribute-to-property')
 
 var VAR = 0, TEXT = 1, OPEN = 2, CLOSE = 3, ATTR = 4
@@ -6652,7 +6728,7 @@ var closeRE = RegExp('^(' + [
 ].join('|') + ')(?:[\.#][a-zA-Z0-9\u007F-\uFFFF_:-]+)*$')
 function selfClosing (tag) { return closeRE.test(tag) }
 
-},{"hyperscript-attribute-to-property":44}],46:[function(require,module,exports){
+},{"hyperscript-attribute-to-property":45}],47:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -6738,7 +6814,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],47:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -7017,7 +7093,7 @@ Agent.prototype.destroy = function() {
 exports.globalAgent = new Agent();
 
 }).call(this,require('_process'))
-},{"_process":86,"events":30,"net":15,"util":116}],48:[function(require,module,exports){
+},{"_process":86,"events":31,"net":15,"util":118}],49:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -7103,13 +7179,13 @@ exports.globalAgent = globalAgent;
 exports.Agent = Agent;
 
 }).call(this,require('_process'))
-},{"./http.js":47,"_process":86,"tls":15,"util":116}],49:[function(require,module,exports){
+},{"./http.js":48,"_process":86,"tls":15,"util":118}],50:[function(require,module,exports){
 'use strict';
 
 exports.http = require('./http.js');
 exports.https = require('./https.js');
 
-},{"./http.js":47,"./https.js":48}],50:[function(require,module,exports){
+},{"./http.js":48,"./https.js":49}],51:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -7134,7 +7210,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],51:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 var inserted = {};
 
 module.exports = function (css, options) {
@@ -7158,7 +7234,7 @@ module.exports = function (css, options) {
     }
 };
 
-},{}],52:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 'use strict';
 
 module.exports = function isArrayish(obj) {
@@ -7170,7 +7246,7 @@ module.exports = function isArrayish(obj) {
 		(obj.length >= 0 && obj.splice instanceof Function);
 };
 
-},{}],53:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -7193,7 +7269,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],54:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 'use strict';
 var toString = Object.prototype.toString;
 
@@ -7202,7 +7278,7 @@ module.exports = function (x) {
 	return toString.call(x) === '[object Object]' && (prototype = Object.getPrototypeOf(x), prototype === null || prototype === Object.getPrototypeOf({}));
 };
 
-},{}],55:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 'use strict';
 module.exports = function (x) {
 	if (typeof x !== 'number') {
@@ -7218,7 +7294,7 @@ module.exports = function (x) {
 		x === 308;
 };
 
-},{}],56:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 'use strict';
 
 var WHITELIST = [
@@ -7280,7 +7356,7 @@ module.exports = function (err) {
 	return true;
 };
 
-},{}],57:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 'use strict';
 
 var isStream = module.exports = function (stream) {
@@ -7303,14 +7379,14 @@ isStream.transform = function (stream) {
 	return isStream.duplex(stream) && typeof stream._transform === 'function' && typeof stream._transformState === 'object';
 };
 
-},{}],58:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 var toString = {}.toString;
 
 module.exports = Array.isArray || function (arr) {
   return toString.call(arr) == '[object Array]';
 };
 
-},{}],59:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 'use strict';
 module.exports = function (obj) {
 	var ret = {};
@@ -7323,7 +7399,7 @@ module.exports = function (obj) {
 	return ret;
 };
 
-},{}],60:[function(require,module,exports){
+},{}],61:[function(require,module,exports){
 // Create a range object for efficently rendering strings to elements.
 var range;
 
@@ -7906,7 +7982,7 @@ function morphdom(fromNode, toNode, options) {
 
 module.exports = morphdom;
 
-},{}],61:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 const window = require('global/window')
 const assert = require('assert')
 
@@ -7952,7 +8028,7 @@ function nanoraf (render, raf) {
   }
 }
 
-},{"assert":7,"global/window":39}],62:[function(require,module,exports){
+},{"assert":7,"global/window":40}],63:[function(require,module,exports){
 var inherits = require('inherits');
 
 var NestedError = function (message, nested) {
@@ -7991,7 +8067,7 @@ NestedError.prototype.name = 'NestedError';
 
 module.exports = NestedError;
 
-},{"inherits":50}],63:[function(require,module,exports){
+},{"inherits":51}],64:[function(require,module,exports){
 'use strict';
 
 // https://github.com/nodejs/io.js/commit/8be6060020
@@ -8055,7 +8131,7 @@ module.exports = {
 	511: 'Network Authentication Required'
 };
 
-},{}],64:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 'use strict';
 
 function ToObject(val) {
@@ -8083,7 +8159,7 @@ module.exports = Object.assign || function (target, source) {
 	return to;
 };
 
-},{}],65:[function(require,module,exports){
+},{}],66:[function(require,module,exports){
 /* global MutationObserver */
 var document = require('global/document')
 var window = require('global/window')
@@ -8172,30 +8248,7 @@ function eachMutation (nodes, fn) {
   }
 }
 
-},{"global/document":38,"global/window":39}],66:[function(require,module,exports){
-var wrappy = require('wrappy')
-module.exports = wrappy(once)
-
-once.proto = once(function () {
-  Object.defineProperty(Function.prototype, 'once', {
-    value: function () {
-      return once(this)
-    },
-    configurable: true
-  })
-})
-
-function once (fn) {
-  var f = function () {
-    if (f.called) return f.value
-    f.called = true
-    return f.value = fn.apply(this, arguments)
-  }
-  f.called = false
-  return f
-}
-
-},{"wrappy":119}],67:[function(require,module,exports){
+},{"global/document":39,"global/window":40}],67:[function(require,module,exports){
 'use strict';
 
 
@@ -13769,7 +13822,7 @@ module.exports = function (x, reviver, filename) {
 	}
 };
 
-},{"./vendor/parse":79,"error-ex":29}],79:[function(require,module,exports){
+},{"./vendor/parse":79,"error-ex":30}],79:[function(require,module,exports){
 /*
  * Author: Alex Kocharin <alex@kocharin.ru>
  * GIT: https://github.com/rlidwka/jju
@@ -14612,7 +14665,7 @@ function match (route) {
   return route.trim()
     .replace(/[\?|#].*$/, '')
     .replace(/^(?:https?\:)\/\//, '')
-    .replace(/^(?:[\w+(?:-\w+)+.])+(?:[\:0-9]{4,5})?/, '')
+    .replace(/^.*?(\/.*)/, '$1')
     .replace(/\/$/, '')
 }
 
@@ -14992,25 +15045,40 @@ var process = module.exports = {};
 var cachedSetTimeout;
 var cachedClearTimeout;
 
+function defaultSetTimout() {
+    throw new Error('setTimeout has not been defined');
+}
+function defaultClearTimeout () {
+    throw new Error('clearTimeout has not been defined');
+}
 (function () {
     try {
-        cachedSetTimeout = setTimeout;
-    } catch (e) {
-        cachedSetTimeout = function () {
-            throw new Error('setTimeout is not defined');
+        if (typeof setTimeout === 'function') {
+            cachedSetTimeout = setTimeout;
+        } else {
+            cachedSetTimeout = defaultSetTimout;
         }
+    } catch (e) {
+        cachedSetTimeout = defaultSetTimout;
     }
     try {
-        cachedClearTimeout = clearTimeout;
-    } catch (e) {
-        cachedClearTimeout = function () {
-            throw new Error('clearTimeout is not defined');
+        if (typeof clearTimeout === 'function') {
+            cachedClearTimeout = clearTimeout;
+        } else {
+            cachedClearTimeout = defaultClearTimeout;
         }
+    } catch (e) {
+        cachedClearTimeout = defaultClearTimeout;
     }
 } ())
 function runTimeout(fun) {
     if (cachedSetTimeout === setTimeout) {
         //normal enviroments in sane situations
+        return setTimeout(fun, 0);
+    }
+    // if setTimeout wasn't available but was latter defined
+    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
+        cachedSetTimeout = setTimeout;
         return setTimeout(fun, 0);
     }
     try {
@@ -15031,6 +15099,11 @@ function runTimeout(fun) {
 function runClearTimeout(marker) {
     if (cachedClearTimeout === clearTimeout) {
         //normal enviroments in sane situations
+        return clearTimeout(marker);
+    }
+    // if clearTimeout wasn't available but was latter defined
+    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
+        cachedClearTimeout = clearTimeout;
         return clearTimeout(marker);
     }
     try {
@@ -15934,7 +16007,7 @@ module.exports = function read(stream, options, cb) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":17,"pinkie-promise":82,"readable-stream":97,"util":116}],92:[function(require,module,exports){
+},{"buffer":17,"pinkie-promise":82,"readable-stream":98,"util":118}],92:[function(require,module,exports){
 // a duplex stream is just a stream that is both readable and writable.
 // Since JS doesn't have multiple prototypal inheritance, this class
 // prototypally inherits from Readable, and then parasitically from
@@ -16010,7 +16083,7 @@ function forEach(xs, f) {
     f(xs[i], i);
   }
 }
-},{"./_stream_readable":94,"./_stream_writable":96,"core-util-is":22,"inherits":50,"process-nextick-args":85}],93:[function(require,module,exports){
+},{"./_stream_readable":94,"./_stream_writable":96,"core-util-is":22,"inherits":51,"process-nextick-args":85}],93:[function(require,module,exports){
 // a passthrough stream.
 // basically just the most minimal sort of Transform stream.
 // Every written chunk gets output as-is.
@@ -16037,7 +16110,7 @@ function PassThrough(options) {
 PassThrough.prototype._transform = function (chunk, encoding, cb) {
   cb(null, chunk);
 };
-},{"./_stream_transform":95,"core-util-is":22,"inherits":50}],94:[function(require,module,exports){
+},{"./_stream_transform":95,"core-util-is":22,"inherits":51}],94:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -16092,21 +16165,21 @@ if (debugUtil && debugUtil.debuglog) {
 }
 /*</replacement>*/
 
+var BufferList = require('./internal/streams/BufferList');
 var StringDecoder;
 
 util.inherits(Readable, Stream);
 
-var hasPrependListener = typeof EE.prototype.prependListener === 'function';
-
 function prependListener(emitter, event, fn) {
-  if (hasPrependListener) return emitter.prependListener(event, fn);
-
-  // This is a brutally ugly hack to make sure that our error handler
-  // is attached before any userland ones.  NEVER DO THIS. This is here
-  // only because this code needs to continue to work with older versions
-  // of Node.js that do not include the prependListener() method. The goal
-  // is to eventually remove this hack.
-  if (!emitter._events || !emitter._events[event]) emitter.on(event, fn);else if (isArray(emitter._events[event])) emitter._events[event].unshift(fn);else emitter._events[event] = [fn, emitter._events[event]];
+  if (typeof emitter.prependListener === 'function') {
+    return emitter.prependListener(event, fn);
+  } else {
+    // This is a hack to make sure that our error handler is attached before any
+    // userland ones.  NEVER DO THIS. This is here only because this code needs
+    // to continue to work with older versions of Node.js that do not include
+    // the prependListener() method. The goal is to eventually remove this hack.
+    if (!emitter._events || !emitter._events[event]) emitter.on(event, fn);else if (isArray(emitter._events[event])) emitter._events[event].unshift(fn);else emitter._events[event] = [fn, emitter._events[event]];
+  }
 }
 
 var Duplex;
@@ -16130,7 +16203,10 @@ function ReadableState(options, stream) {
   // cast to ints.
   this.highWaterMark = ~ ~this.highWaterMark;
 
-  this.buffer = [];
+  // A linked list is used to store data chunks instead of an array because the
+  // linked list can remove elements from the beginning faster than
+  // array.shift()
+  this.buffer = new BufferList();
   this.length = 0;
   this.pipes = null;
   this.pipesCount = 0;
@@ -16293,7 +16369,8 @@ function computeNewHighWaterMark(n) {
   if (n >= MAX_HWM) {
     n = MAX_HWM;
   } else {
-    // Get the next highest power of 2
+    // Get the next highest power of 2 to prevent increasing hwm excessively in
+    // tiny amounts
     n--;
     n |= n >>> 1;
     n |= n >>> 2;
@@ -16305,44 +16382,34 @@ function computeNewHighWaterMark(n) {
   return n;
 }
 
+// This function is designed to be inlinable, so please take care when making
+// changes to the function body.
 function howMuchToRead(n, state) {
-  if (state.length === 0 && state.ended) return 0;
-
-  if (state.objectMode) return n === 0 ? 0 : 1;
-
-  if (n === null || isNaN(n)) {
-    // only flow one buffer at a time
-    if (state.flowing && state.buffer.length) return state.buffer[0].length;else return state.length;
+  if (n <= 0 || state.length === 0 && state.ended) return 0;
+  if (state.objectMode) return 1;
+  if (n !== n) {
+    // Only flow one buffer at a time
+    if (state.flowing && state.length) return state.buffer.head.data.length;else return state.length;
   }
-
-  if (n <= 0) return 0;
-
-  // If we're asking for more than the target buffer level,
-  // then raise the water mark.  Bump up to the next highest
-  // power of 2, to prevent increasing it excessively in tiny
-  // amounts.
+  // If we're asking for more than the current hwm, then raise the hwm.
   if (n > state.highWaterMark) state.highWaterMark = computeNewHighWaterMark(n);
-
-  // don't have that much.  return null, unless we've ended.
-  if (n > state.length) {
-    if (!state.ended) {
-      state.needReadable = true;
-      return 0;
-    } else {
-      return state.length;
-    }
+  if (n <= state.length) return n;
+  // Don't have enough
+  if (!state.ended) {
+    state.needReadable = true;
+    return 0;
   }
-
-  return n;
+  return state.length;
 }
 
 // you can override either this method, or the async _read(n) below.
 Readable.prototype.read = function (n) {
   debug('read', n);
+  n = parseInt(n, 10);
   var state = this._readableState;
   var nOrig = n;
 
-  if (typeof n !== 'number' || n > 0) state.emittedReadable = false;
+  if (n !== 0) state.emittedReadable = false;
 
   // if we're doing read(0) to trigger a readable event, but we
   // already have a bunch of data in the buffer, then just trigger
@@ -16398,9 +16465,7 @@ Readable.prototype.read = function (n) {
   if (state.ended || state.reading) {
     doRead = false;
     debug('reading or ended', doRead);
-  }
-
-  if (doRead) {
+  } else if (doRead) {
     debug('do read');
     state.reading = true;
     state.sync = true;
@@ -16409,11 +16474,10 @@ Readable.prototype.read = function (n) {
     // call internal read method
     this._read(state.highWaterMark);
     state.sync = false;
+    // If _read pushed data synchronously, then `reading` will be false,
+    // and we need to re-evaluate how much data we can return to the user.
+    if (!state.reading) n = howMuchToRead(nOrig, state);
   }
-
-  // If _read pushed data synchronously, then `reading` will be false,
-  // and we need to re-evaluate how much data we can return to the user.
-  if (doRead && !state.reading) n = howMuchToRead(nOrig, state);
 
   var ret;
   if (n > 0) ret = fromList(n, state);else ret = null;
@@ -16421,16 +16485,18 @@ Readable.prototype.read = function (n) {
   if (ret === null) {
     state.needReadable = true;
     n = 0;
+  } else {
+    state.length -= n;
   }
 
-  state.length -= n;
+  if (state.length === 0) {
+    // If we have nothing in the buffer, then we want to know
+    // as soon as we *do* get something into the buffer.
+    if (!state.ended) state.needReadable = true;
 
-  // If we have nothing in the buffer, then we want to know
-  // as soon as we *do* get something into the buffer.
-  if (state.length === 0 && !state.ended) state.needReadable = true;
-
-  // If we tried to read() past the EOF, then emit end on the next tick.
-  if (nOrig !== n && state.ended && state.length === 0) endReadable(this);
+    // If we tried to read() past the EOF, then emit end on the next tick.
+    if (nOrig !== n && state.ended) endReadable(this);
+  }
 
   if (ret !== null) this.emit('data', ret);
 
@@ -16578,11 +16644,17 @@ Readable.prototype.pipe = function (dest, pipeOpts) {
     if (state.awaitDrain && (!dest._writableState || dest._writableState.needDrain)) ondrain();
   }
 
+  // If the user pushes more data while we're writing to dest then we'll end up
+  // in ondata again. However, we only want to increase awaitDrain once because
+  // dest will only emit one 'drain' event for the multiple writes.
+  // => Introduce a guard on increasing awaitDrain.
+  var increasedAwaitDrain = false;
   src.on('data', ondata);
   function ondata(chunk) {
     debug('ondata');
+    increasedAwaitDrain = false;
     var ret = dest.write(chunk);
-    if (false === ret) {
+    if (false === ret && !increasedAwaitDrain) {
       // If the user unpiped during `dest.write()`, it is possible
       // to get stuck in a permanently paused state if that write
       // also returned false.
@@ -16590,6 +16662,7 @@ Readable.prototype.pipe = function (dest, pipeOpts) {
       if ((state.pipesCount === 1 && state.pipes === dest || state.pipesCount > 1 && indexOf(state.pipes, dest) !== -1) && !cleanedUp) {
         debug('false write response, pause', src._readableState.awaitDrain);
         src._readableState.awaitDrain++;
+        increasedAwaitDrain = true;
       }
       src.pause();
     }
@@ -16703,18 +16776,14 @@ Readable.prototype.unpipe = function (dest) {
 Readable.prototype.on = function (ev, fn) {
   var res = Stream.prototype.on.call(this, ev, fn);
 
-  // If listening to data, and it has not explicitly been paused,
-  // then call resume to start the flow of data on the next tick.
-  if (ev === 'data' && false !== this._readableState.flowing) {
-    this.resume();
-  }
-
-  if (ev === 'readable' && !this._readableState.endEmitted) {
+  if (ev === 'data') {
+    // Start flowing on next tick if stream isn't explicitly paused
+    if (this._readableState.flowing !== false) this.resume();
+  } else if (ev === 'readable') {
     var state = this._readableState;
-    if (!state.readableListening) {
-      state.readableListening = true;
+    if (!state.endEmitted && !state.readableListening) {
+      state.readableListening = state.needReadable = true;
       state.emittedReadable = false;
-      state.needReadable = true;
       if (!state.reading) {
         processNextTick(nReadingNextTick, this);
       } else if (state.length) {
@@ -16758,6 +16827,7 @@ function resume_(stream, state) {
   }
 
   state.resumeScheduled = false;
+  state.awaitDrain = 0;
   stream.emit('resume');
   flow(stream);
   if (state.flowing && !state.reading) stream.read(0);
@@ -16776,11 +16846,7 @@ Readable.prototype.pause = function () {
 function flow(stream) {
   var state = stream._readableState;
   debug('flow', state.flowing);
-  if (state.flowing) {
-    do {
-      var chunk = stream.read();
-    } while (null !== chunk && state.flowing);
-  }
+  while (state.flowing && stream.read() !== null) {}
 }
 
 // wrap an old-style stream as the async data source.
@@ -16851,50 +16917,101 @@ Readable._fromList = fromList;
 
 // Pluck off n bytes from an array of buffers.
 // Length is the combined lengths of all the buffers in the list.
+// This function is designed to be inlinable, so please take care when making
+// changes to the function body.
 function fromList(n, state) {
-  var list = state.buffer;
-  var length = state.length;
-  var stringMode = !!state.decoder;
-  var objectMode = !!state.objectMode;
+  // nothing buffered
+  if (state.length === 0) return null;
+
   var ret;
-
-  // nothing in the list, definitely empty.
-  if (list.length === 0) return null;
-
-  if (length === 0) ret = null;else if (objectMode) ret = list.shift();else if (!n || n >= length) {
-    // read it all, truncate the array.
-    if (stringMode) ret = list.join('');else if (list.length === 1) ret = list[0];else ret = Buffer.concat(list, length);
-    list.length = 0;
+  if (state.objectMode) ret = state.buffer.shift();else if (!n || n >= state.length) {
+    // read it all, truncate the list
+    if (state.decoder) ret = state.buffer.join('');else if (state.buffer.length === 1) ret = state.buffer.head.data;else ret = state.buffer.concat(state.length);
+    state.buffer.clear();
   } else {
-    // read just some of it.
-    if (n < list[0].length) {
-      // just take a part of the first list item.
-      // slice is the same for buffers and strings.
-      var buf = list[0];
-      ret = buf.slice(0, n);
-      list[0] = buf.slice(n);
-    } else if (n === list[0].length) {
-      // first list is a perfect match
-      ret = list.shift();
-    } else {
-      // complex case.
-      // we have enough to cover it, but it spans past the first buffer.
-      if (stringMode) ret = '';else ret = bufferShim.allocUnsafe(n);
-
-      var c = 0;
-      for (var i = 0, l = list.length; i < l && c < n; i++) {
-        var _buf = list[0];
-        var cpy = Math.min(n - c, _buf.length);
-
-        if (stringMode) ret += _buf.slice(0, cpy);else _buf.copy(ret, c, 0, cpy);
-
-        if (cpy < _buf.length) list[0] = _buf.slice(cpy);else list.shift();
-
-        c += cpy;
-      }
-    }
+    // read part of list
+    ret = fromListPartial(n, state.buffer, state.decoder);
   }
 
+  return ret;
+}
+
+// Extracts only enough buffered data to satisfy the amount requested.
+// This function is designed to be inlinable, so please take care when making
+// changes to the function body.
+function fromListPartial(n, list, hasStrings) {
+  var ret;
+  if (n < list.head.data.length) {
+    // slice is the same for buffers and strings
+    ret = list.head.data.slice(0, n);
+    list.head.data = list.head.data.slice(n);
+  } else if (n === list.head.data.length) {
+    // first chunk is a perfect match
+    ret = list.shift();
+  } else {
+    // result spans more than one buffer
+    ret = hasStrings ? copyFromBufferString(n, list) : copyFromBuffer(n, list);
+  }
+  return ret;
+}
+
+// Copies a specified amount of characters from the list of buffered data
+// chunks.
+// This function is designed to be inlinable, so please take care when making
+// changes to the function body.
+function copyFromBufferString(n, list) {
+  var p = list.head;
+  var c = 1;
+  var ret = p.data;
+  n -= ret.length;
+  while (p = p.next) {
+    var str = p.data;
+    var nb = n > str.length ? str.length : n;
+    if (nb === str.length) ret += str;else ret += str.slice(0, n);
+    n -= nb;
+    if (n === 0) {
+      if (nb === str.length) {
+        ++c;
+        if (p.next) list.head = p.next;else list.head = list.tail = null;
+      } else {
+        list.head = p;
+        p.data = str.slice(nb);
+      }
+      break;
+    }
+    ++c;
+  }
+  list.length -= c;
+  return ret;
+}
+
+// Copies a specified amount of bytes from the list of buffered data chunks.
+// This function is designed to be inlinable, so please take care when making
+// changes to the function body.
+function copyFromBuffer(n, list) {
+  var ret = bufferShim.allocUnsafe(n);
+  var p = list.head;
+  var c = 1;
+  p.data.copy(ret);
+  n -= p.data.length;
+  while (p = p.next) {
+    var buf = p.data;
+    var nb = n > buf.length ? buf.length : n;
+    buf.copy(ret, ret.length - n, 0, nb);
+    n -= nb;
+    if (n === 0) {
+      if (nb === buf.length) {
+        ++c;
+        if (p.next) list.head = p.next;else list.head = list.tail = null;
+      } else {
+        list.head = p;
+        p.data = buf.slice(nb);
+      }
+      break;
+    }
+    ++c;
+  }
+  list.length -= c;
   return ret;
 }
 
@@ -16933,7 +17050,7 @@ function indexOf(xs, x) {
   return -1;
 }
 }).call(this,require('_process'))
-},{"./_stream_duplex":92,"_process":86,"buffer":17,"buffer-shims":16,"core-util-is":22,"events":30,"inherits":50,"isarray":58,"process-nextick-args":85,"string_decoder/":108,"util":12}],95:[function(require,module,exports){
+},{"./_stream_duplex":92,"./internal/streams/BufferList":97,"_process":86,"buffer":17,"buffer-shims":16,"core-util-is":22,"events":31,"inherits":51,"isarray":59,"process-nextick-args":85,"string_decoder/":109,"util":12}],95:[function(require,module,exports){
 // a transform stream is a readable/writable stream where you do
 // something with the data.  Sometimes it's called a "filter",
 // but that's not a great name for it, since that implies a thing where
@@ -17114,7 +17231,7 @@ function done(stream, er) {
 
   return stream.push(null);
 }
-},{"./_stream_duplex":92,"core-util-is":22,"inherits":50}],96:[function(require,module,exports){
+},{"./_stream_duplex":92,"core-util-is":22,"inherits":51}],96:[function(require,module,exports){
 (function (process){
 // A bit simpler than readable streams.
 // Implement an async ._write(chunk, encoding, cb), and it'll handle all
@@ -17643,7 +17760,72 @@ function CorkedRequest(state) {
   };
 }
 }).call(this,require('_process'))
-},{"./_stream_duplex":92,"_process":86,"buffer":17,"buffer-shims":16,"core-util-is":22,"events":30,"inherits":50,"process-nextick-args":85,"util-deprecate":114}],97:[function(require,module,exports){
+},{"./_stream_duplex":92,"_process":86,"buffer":17,"buffer-shims":16,"core-util-is":22,"events":31,"inherits":51,"process-nextick-args":85,"util-deprecate":115}],97:[function(require,module,exports){
+'use strict';
+
+var Buffer = require('buffer').Buffer;
+/*<replacement>*/
+var bufferShim = require('buffer-shims');
+/*</replacement>*/
+
+module.exports = BufferList;
+
+function BufferList() {
+  this.head = null;
+  this.tail = null;
+  this.length = 0;
+}
+
+BufferList.prototype.push = function (v) {
+  var entry = { data: v, next: null };
+  if (this.length > 0) this.tail.next = entry;else this.head = entry;
+  this.tail = entry;
+  ++this.length;
+};
+
+BufferList.prototype.unshift = function (v) {
+  var entry = { data: v, next: this.head };
+  if (this.length === 0) this.tail = entry;
+  this.head = entry;
+  ++this.length;
+};
+
+BufferList.prototype.shift = function () {
+  if (this.length === 0) return;
+  var ret = this.head.data;
+  if (this.length === 1) this.head = this.tail = null;else this.head = this.head.next;
+  --this.length;
+  return ret;
+};
+
+BufferList.prototype.clear = function () {
+  this.head = this.tail = null;
+  this.length = 0;
+};
+
+BufferList.prototype.join = function (s) {
+  if (this.length === 0) return '';
+  var p = this.head;
+  var ret = '' + p.data;
+  while (p = p.next) {
+    ret += s + p.data;
+  }return ret;
+};
+
+BufferList.prototype.concat = function (n) {
+  if (this.length === 0) return bufferShim.alloc(0);
+  if (this.length === 1) return this.head.data;
+  var ret = bufferShim.allocUnsafe(n >>> 0);
+  var p = this.head;
+  var i = 0;
+  while (p) {
+    p.data.copy(ret, i);
+    i += p.data.length;
+    p = p.next;
+  }
+  return ret;
+};
+},{"buffer":17,"buffer-shims":16}],98:[function(require,module,exports){
 (function (process){
 var Stream = (function (){
   try {
@@ -17663,10 +17845,10 @@ if (!process.browser && process.env.READABLE_STREAM === 'disable' && Stream) {
 }
 
 }).call(this,require('_process'))
-},{"./lib/_stream_duplex.js":92,"./lib/_stream_passthrough.js":93,"./lib/_stream_readable.js":94,"./lib/_stream_transform.js":95,"./lib/_stream_writable.js":96,"_process":86}],98:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":92,"./lib/_stream_passthrough.js":93,"./lib/_stream_readable.js":94,"./lib/_stream_transform.js":95,"./lib/_stream_writable.js":96,"_process":86}],99:[function(require,module,exports){
 module.exports = require("./lib/_stream_transform.js")
 
-},{"./lib/_stream_transform.js":95}],99:[function(require,module,exports){
+},{"./lib/_stream_transform.js":95}],100:[function(require,module,exports){
 const window = require('global/window')
 const assert = require('assert')
 
@@ -17682,7 +17864,7 @@ function hash (cb) {
   }
 }
 
-},{"assert":7,"global/window":39}],100:[function(require,module,exports){
+},{"assert":7,"global/window":40}],101:[function(require,module,exports){
 const document = require('global/document')
 const window = require('global/window')
 const assert = require('assert')
@@ -17699,7 +17881,7 @@ function history (cb) {
   }
 }
 
-},{"assert":7,"global/document":38,"global/window":39}],101:[function(require,module,exports){
+},{"assert":7,"global/document":39,"global/window":40}],102:[function(require,module,exports){
 const window = require('global/window')
 const assert = require('assert')
 
@@ -17730,7 +17912,7 @@ function href (cb) {
   }
 }
 
-},{"assert":7,"global/window":39}],102:[function(require,module,exports){
+},{"assert":7,"global/window":40}],103:[function(require,module,exports){
 const pathname = require('pathname-match')
 const wayfarer = require('wayfarer')
 const assert = require('assert')
@@ -17801,7 +17983,7 @@ function _createRoute (route, inline, child) {
   return [ route, inline, child ]
 }
 
-},{"assert":7,"pathname-match":81,"wayfarer":117}],103:[function(require,module,exports){
+},{"assert":7,"pathname-match":81,"wayfarer":119}],104:[function(require,module,exports){
 (function (global){
 var ClientRequest = require('./lib/request')
 var extend = require('xtend')
@@ -17883,7 +18065,7 @@ http.METHODS = [
 	'UNSUBSCRIBE'
 ]
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./lib/request":105,"builtin-status-codes":18,"url":112,"xtend":120}],104:[function(require,module,exports){
+},{"./lib/request":106,"builtin-status-codes":18,"url":113,"xtend":122}],105:[function(require,module,exports){
 (function (global){
 exports.fetch = isFunction(global.fetch) && isFunction(global.ReadableStream)
 
@@ -17927,7 +18109,7 @@ function isFunction (value) {
 xhr = null // Help gc
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],105:[function(require,module,exports){
+},{}],106:[function(require,module,exports){
 (function (process,global,Buffer){
 var capability = require('./capability')
 var inherits = require('inherits')
@@ -17938,8 +18120,8 @@ var toArrayBuffer = require('to-arraybuffer')
 var IncomingMessage = response.IncomingMessage
 var rStates = response.readyStates
 
-function decideMode (preferBinary) {
-	if (capability.fetch) {
+function decideMode (preferBinary, useFetch) {
+	if (capability.fetch && useFetch) {
 		return 'fetch'
 	} else if (capability.mozchunkedarraybuffer) {
 		return 'moz-chunked-arraybuffer'
@@ -17968,7 +18150,12 @@ var ClientRequest = module.exports = function (opts) {
 	})
 
 	var preferBinary
-	if (opts.mode === 'prefer-streaming') {
+	var useFetch = true
+	if (opts.mode === 'disable-fetch') {
+		// If the use of XHR should be preferred and includes preserving the 'content-type' header
+		useFetch = false
+		preferBinary = true
+	} else if (opts.mode === 'prefer-streaming') {
 		// If streaming is a high priority but binary compatibility and
 		// the accuracy of the 'content-type' header aren't
 		preferBinary = false
@@ -17981,7 +18168,7 @@ var ClientRequest = module.exports = function (opts) {
 	} else {
 		throw new Error('Invalid value for opts.mode')
 	}
-	self._mode = decideMode(preferBinary)
+	self._mode = decideMode(preferBinary, useFetch)
 
 	self.on('finish', function () {
 		self._onFinish()
@@ -18208,7 +18395,7 @@ var unsafeHeaders = [
 ]
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"./capability":104,"./response":106,"_process":86,"buffer":17,"inherits":50,"readable-stream":97,"to-arraybuffer":110}],106:[function(require,module,exports){
+},{"./capability":105,"./response":107,"_process":86,"buffer":17,"inherits":51,"readable-stream":98,"to-arraybuffer":111}],107:[function(require,module,exports){
 (function (process,global,Buffer){
 var capability = require('./capability')
 var inherits = require('inherits')
@@ -18355,7 +18542,7 @@ IncomingMessage.prototype._onXHRProgress = function () {
 			}
 			break
 		case 'arraybuffer':
-			if (xhr.readyState !== rStates.DONE)
+			if (xhr.readyState !== rStates.DONE || !xhr.response)
 				break
 			response = xhr.response
 			self.push(new Buffer(new Uint8Array(response)))
@@ -18392,7 +18579,7 @@ IncomingMessage.prototype._onXHRProgress = function () {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"./capability":104,"_process":86,"buffer":17,"inherits":50,"readable-stream":97}],107:[function(require,module,exports){
+},{"./capability":105,"_process":86,"buffer":17,"inherits":51,"readable-stream":98}],108:[function(require,module,exports){
 module.exports = shift
 
 function shift (stream) {
@@ -18414,7 +18601,7 @@ function getStateLength (state) {
   return state.length
 }
 
-},{}],108:[function(require,module,exports){
+},{}],109:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -18637,7 +18824,7 @@ function base64DetectIncompleteChar(buffer) {
   this.charLength = this.charReceived ? 3 : 0;
 }
 
-},{"buffer":17}],109:[function(require,module,exports){
+},{"buffer":17}],110:[function(require,module,exports){
 'use strict';
 
 module.exports = function (req, time) {
@@ -18673,7 +18860,7 @@ module.exports = function (req, time) {
 		.on('error', clear);
 };
 
-},{}],110:[function(require,module,exports){
+},{}],111:[function(require,module,exports){
 var Buffer = require('buffer').Buffer
 
 module.exports = function (buf) {
@@ -18702,7 +18889,7 @@ module.exports = function (buf) {
 	}
 }
 
-},{"buffer":17}],111:[function(require,module,exports){
+},{"buffer":17}],112:[function(require,module,exports){
 'use strict';
 var url = require('url');
 var prependHttp = require('prepend-http');
@@ -18718,7 +18905,7 @@ module.exports = function (x) {
 	return parsed;
 };
 
-},{"prepend-http":84,"url":112}],112:[function(require,module,exports){
+},{"prepend-http":84,"url":113}],113:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -19452,7 +19639,7 @@ Url.prototype.parseHost = function() {
   if (host) this.hostname = host;
 };
 
-},{"./util":113,"punycode":87,"querystring":90}],113:[function(require,module,exports){
+},{"./util":114,"punycode":87,"querystring":90}],114:[function(require,module,exports){
 'use strict';
 
 module.exports = {
@@ -19470,7 +19657,7 @@ module.exports = {
   }
 };
 
-},{}],114:[function(require,module,exports){
+},{}],115:[function(require,module,exports){
 (function (global){
 
 /**
@@ -19541,14 +19728,16 @@ function config (name) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],115:[function(require,module,exports){
+},{}],116:[function(require,module,exports){
+arguments[4][51][0].apply(exports,arguments)
+},{"dup":51}],117:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],116:[function(require,module,exports){
+},{}],118:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -20138,7 +20327,7 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":115,"_process":86,"inherits":50}],117:[function(require,module,exports){
+},{"./support/isBuffer":117,"_process":86,"inherits":116}],119:[function(require,module,exports){
 const assert = require('assert')
 const trie = require('./trie')
 
@@ -20199,7 +20388,7 @@ function Wayfarer (dft) {
   }
 }
 
-},{"./trie":118,"assert":7}],118:[function(require,module,exports){
+},{"./trie":120,"assert":7}],120:[function(require,module,exports){
 const mutate = require('xtend/mutable')
 const assert = require('assert')
 const xtend = require('xtend')
@@ -20316,7 +20505,7 @@ Trie.prototype.mount = function (route, trie) {
   }
 }
 
-},{"assert":7,"xtend":120,"xtend/mutable":121}],119:[function(require,module,exports){
+},{"assert":7,"xtend":122,"xtend/mutable":123}],121:[function(require,module,exports){
 // Returns a wrapper function that returns a wrapped callback
 // The wrapper function should do some stuff, and return a
 // presumably different callback function.
@@ -20351,7 +20540,7 @@ function wrappy (fn, cb) {
   }
 }
 
-},{}],120:[function(require,module,exports){
+},{}],122:[function(require,module,exports){
 module.exports = extend
 
 var hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -20372,7 +20561,7 @@ function extend() {
     return target
 }
 
-},{}],121:[function(require,module,exports){
+},{}],123:[function(require,module,exports){
 module.exports = extend
 
 var hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -20391,7 +20580,7 @@ function extend(target) {
     return target
 }
 
-},{}],122:[function(require,module,exports){
+},{}],124:[function(require,module,exports){
 var bel = require('bel') // turns template tag into DOM elements
 var morphdom = require('morphdom') // efficiently diffs + morphs two DOM elements
 var defaultEvents = require('./update-events.js') // default events to be copied when dom elements update
@@ -20427,7 +20616,7 @@ module.exports.update = function (fromNode, toNode, opts) {
   }
 }
 
-},{"./update-events.js":123,"bel":11,"morphdom":60}],123:[function(require,module,exports){
+},{"./update-events.js":125,"bel":11,"morphdom":61}],125:[function(require,module,exports){
 module.exports = [
   // attribute events (can be set with attributes)
   'onclick',
@@ -20465,10 +20654,10 @@ module.exports = [
   'onfocusout'
 ]
 
-},{}],124:[function(require,module,exports){
+},{}],126:[function(require,module,exports){
 
   var minidocs = require('minidocs')
   var app = minidocs({"title":"send-action","contents":[{"depth":1,"name":"overview"},{"depth":2,"name":"about","key":"about","link":"/send-action/about"},{"depth":1,"name":"examples"},{"depth":2,"name":"yo-yo.js","key":"yo-yo","link":"/send-action/yo-yo"},{"depth":2,"name":"virtual-dom","key":"virtual-dom","link":"/send-action/virtual-dom"},{"depth":2,"name":"react","key":"react","link":"/send-action/react"}],"markdown":"/Users/sdv/workspace/sethvincent/send-action/docs","initial":"about","basedir":"/send-action","dir":"/Users/sdv/workspace/sethvincent/send-action","routes":{"index":"/","about":"/about/","yo-yo":"/yo-yo/","virtual-dom":"/virtual-dom/","react":"/react/"},"html":{"about":"<h1 id=\"about-send-action\">About send-action</h1>\n<p><code>send-action</code> is meant to be the smallest, simplest redux-like state management library. The focus is on providing a concise method for triggering actions, and on avoiding complex middleware &amp; development dependencies.</p>\n<p>The API is significantly different from redux, but the pattern is similar. </p>\n<p>Using <code>send-action</code> you trigger actions, modify state based on those actions, and listen to the changes to render your application.</p>\n<h2 id=\"source-code\">Source code</h2>\n<ul>\n<li><a href=\"https://github.com/sethvincent/send-action\">GitHub repo</a></li>\n<li><a href=\"http://npmjs.com/send-action\">send-action on npm</a></li>\n</ul>\n<h2 id=\"install-using-npm\">Install using npm</h2>\n<pre><code class=\"lang-sh\">npm i --save send-action\n</code></pre>\n<p>If you don&#39;t have node &amp; npm installed already, install the latest from <a href=\"https://nodejs.org\">nodejs.org</a>.</p>\n<h2 id=\"basic-example\">Basic example</h2>\n<pre><code class=\"lang-js\"><span class=\"hljs-keyword\">var</span> sendAction = <span class=\"hljs-built_in\">require</span>(<span class=\"hljs-string\">'send-action'</span>)\n\n<span class=\"hljs-comment\">/*\n* Create send function.\n*/</span>\n<span class=\"hljs-keyword\">var</span> send = sendAction({\n  onaction: <span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> (<span class=\"hljs-params\">action, state</span>) </span>{\n    <span class=\"hljs-comment\">// modify the state based on actions</span>\n    <span class=\"hljs-keyword\">return</span> state\n  },\n  onchange: <span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> (<span class=\"hljs-params\">action, state, oldstate</span>) </span>{\n    <span class=\"hljs-comment\">// render your application</span>\n    <span class=\"hljs-built_in\">console</span>.log(action, state, oldstate)\n  },\n  state: {}\n})\n\n<span class=\"hljs-comment\">/*\n* Send an action to the store\n*/</span>\nsend({ type: <span class=\"hljs-string\">'example'</span> value: <span class=\"hljs-string\">'cool'</span> })\n</code></pre>\n","yo-yo":"<h1 id=\"using-send-action-with-yo-yo-js\">Using send-action with yo-yo.js</h1>\n<p>This example shows using send-action with <a href=\"https://github.com/maxogden/yo-yo\">yo-yo.js</a>.</p>\n<p><a href=\"http://requirebin.com/?gist=a78a13e2b8ee24835665537aa94a9685\"><img src=\"http://requirebin.com/badge.png\" alt=\"view on requirebin\"></a></p>\n<pre><code class=\"lang-js\"><span class=\"hljs-keyword\">var</span> yo = <span class=\"hljs-built_in\">require</span>(<span class=\"hljs-string\">'yo-yo'</span>)\n<span class=\"hljs-keyword\">var</span> sendAction = <span class=\"hljs-built_in\">require</span>(<span class=\"hljs-string\">'send-action'</span>)\n\n<span class=\"hljs-comment\">/*\n* Create send function.\n*/</span>\n<span class=\"hljs-keyword\">var</span> send = sendAction({\n  onaction: onaction,\n  onchange: onchange,\n  state: { value: <span class=\"hljs-string\">'ok'</span> }\n})\n\n<span class=\"hljs-comment\">/*\n* Set up the action handler to modify state based on the actions triggered\n*/</span>\n<span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> <span class=\"hljs-title\">onaction</span> (<span class=\"hljs-params\">action, state</span>) </span>{\n  <span class=\"hljs-keyword\">if</span> (action.type === <span class=\"hljs-string\">'example'</span>) {\n    <span class=\"hljs-keyword\">return</span> { value: action.value }\n  }\n}\n\n<span class=\"hljs-comment\">/*\n* Subscribe to changes to the store for rendering &amp; logging\n*/</span>\n<span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> <span class=\"hljs-title\">onchange</span> (<span class=\"hljs-params\">action, state, oldState</span>) </span>{\n  yo.update(<span class=\"hljs-built_in\">document</span>.getElementById(<span class=\"hljs-string\">'app'</span>), render(state))\n}\n\n<span class=\"hljs-comment\">/*\n* Render the html of the app with yo-yo\n*/</span>\n<span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> <span class=\"hljs-title\">render</span> (<span class=\"hljs-params\">state</span>) </span>{\n  <span class=\"hljs-keyword\">return</span> div(state)\n}\n\n<span class=\"hljs-built_in\">document</span>.body.appendChild(render(send.state()))\n\n<span class=\"hljs-comment\">/*\n* Send an action to the store\n*/</span>\nsend({ type: <span class=\"hljs-string\">'example'</span>, value: <span class=\"hljs-string\">'cool'</span> })\n\n<span class=\"hljs-comment\">/*\n* Alternate `send` syntax\n*/</span>\nsend(<span class=\"hljs-string\">'example'</span>, { value: <span class=\"hljs-string\">'awesome'</span> })\n\n<span class=\"hljs-comment\">/*\n* Create a component to render\n*/</span>\n<span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> <span class=\"hljs-title\">div</span> (<span class=\"hljs-params\">state</span>) </span>{\n  <span class=\"hljs-keyword\">return</span> yo<span class=\"hljs-string\">`&lt;div id=\"app\"&gt;<span class=\"hljs-subst\">${state.value}</span>&lt;/div&gt;`</span>\n}\n</code></pre>\n","virtual-dom":"<h1 id=\"using-send-action-with-virtual-dom\">Using send-action with virtual-dom</h1>\n<p>This example shows using send-action with <a href=\"http://npmjs.com/virtual-dom\">virtual-dom</a> and <a href=\"http://npmjs.com/virtual-raf\">virtual-raf</a>.</p>\n<p><a href=\"http://requirebin.com/?gist=10bb9ef42774c3fdbaa07b3e53582abe\"><img src=\"http://requirebin.com/badge.png\" alt=\"view on requirebin\"></a></p>\n<pre><code class=\"lang-js\"><span class=\"hljs-keyword\">var</span> sendAction = <span class=\"hljs-built_in\">require</span>(<span class=\"hljs-string\">'send-action'</span>)\n<span class=\"hljs-keyword\">var</span> vraf = <span class=\"hljs-built_in\">require</span>(<span class=\"hljs-string\">'virtual-raf'</span>)\n<span class=\"hljs-keyword\">var</span> vdom = <span class=\"hljs-built_in\">require</span>(<span class=\"hljs-string\">'virtual-dom'</span>)\n<span class=\"hljs-keyword\">var</span> h = <span class=\"hljs-built_in\">require</span>(<span class=\"hljs-string\">'virtual-dom/h'</span>)\n\n<span class=\"hljs-comment\">/*\n* Create send function.\n*/</span>\n<span class=\"hljs-keyword\">var</span> send = sendAction({\n  onaction: onaction,\n  onchange: onchange,\n  state: { value: <span class=\"hljs-string\">'ok'</span> }\n})\n\n<span class=\"hljs-comment\">/*\n* Set up the action handler to modify state based on the actions triggered\n*/</span>\n<span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> <span class=\"hljs-title\">onaction</span> (<span class=\"hljs-params\">action, state</span>) </span>{\n  <span class=\"hljs-keyword\">if</span> (action.type === <span class=\"hljs-string\">'example'</span>) {\n    <span class=\"hljs-keyword\">return</span> { value: action.value }\n  }\n}\n\n<span class=\"hljs-comment\">/*\n* Subscribe to changes to the store for rendering &amp; logging\n*/</span>\n<span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> <span class=\"hljs-title\">onchange</span> (<span class=\"hljs-params\">action, state, oldState</span>) </span>{\n  tree.update(state)\n}\n\n<span class=\"hljs-comment\">/*\n* Render the html of the app with virtual-dom\n*/</span>\n<span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> <span class=\"hljs-title\">render</span> (<span class=\"hljs-params\">state</span>) </span>{\n  <span class=\"hljs-keyword\">return</span> div(state)\n}\n\n<span class=\"hljs-comment\">/* initial render */</span>\n<span class=\"hljs-keyword\">var</span> tree = vraf(send.state(), render, vdom)\n<span class=\"hljs-built_in\">document</span>.body.appendChild(tree.render())\n\n<span class=\"hljs-comment\">/*\n* Send an action to the store\n*/</span>\nsend({ type: <span class=\"hljs-string\">'example'</span>, value: <span class=\"hljs-string\">'cool'</span> })\n\n<span class=\"hljs-comment\">/*\n* Alternate `send` syntax\n*/</span>\nsend(<span class=\"hljs-string\">'example'</span>, { value: <span class=\"hljs-string\">'awesome'</span> })\n\n<span class=\"hljs-comment\">/*\n* Create a component to render\n*/</span>\n<span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> <span class=\"hljs-title\">div</span> (<span class=\"hljs-params\">state</span>) </span>{\n  <span class=\"hljs-keyword\">return</span> h(<span class=\"hljs-string\">'div#app'</span>, state.value)\n}\n</code></pre>\n","react":"<h1 id=\"using-send-action-with-react\">Using send-action with React</h1>\n<p>This example shows using send-action with <a href=\"http://npmjs.com/react\">react</a>.</p>\n<p><a href=\"http://requirebin.com/?gist=8127eec940113306f6c511fd0d3148d1\"><img src=\"http://requirebin.com/badge.png\" alt=\"view on requirebin\"></a></p>\n<pre><code class=\"lang-js\"><span class=\"hljs-keyword\">var</span> sendAction = <span class=\"hljs-built_in\">require</span>(<span class=\"hljs-string\">'send-action'</span>)\n<span class=\"hljs-keyword\">var</span> dom = <span class=\"hljs-built_in\">require</span>(<span class=\"hljs-string\">'react-dom'</span>)\n<span class=\"hljs-keyword\">var</span> react = <span class=\"hljs-built_in\">require</span>(<span class=\"hljs-string\">'react'</span>)\n\n<span class=\"hljs-comment\">/*\n* Create send function.\n*/</span>\n<span class=\"hljs-keyword\">var</span> send = sendAction({\n  onaction: onaction,\n  onchange: onchange,\n  state: { value: <span class=\"hljs-string\">'ok'</span> }\n})\n\n<span class=\"hljs-keyword\">var</span> appEl = <span class=\"hljs-built_in\">document</span>.body.appendChild(<span class=\"hljs-built_in\">document</span>.createElement(<span class=\"hljs-string\">'div'</span>))\nappEl.id = <span class=\"hljs-string\">'app'</span>\n\n<span class=\"hljs-comment\">/*\n* Set up the action handler to modify state based on the actions triggered\n*/</span>\n<span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> <span class=\"hljs-title\">onaction</span> (<span class=\"hljs-params\">action, state</span>) </span>{\n  <span class=\"hljs-keyword\">if</span> (action.type === <span class=\"hljs-string\">'example'</span>) {\n    <span class=\"hljs-keyword\">return</span> { value: action.value }\n  }\n}\n\n<span class=\"hljs-comment\">/*\n* Subscribe to changes to the store for rendering &amp; logging\n*/</span>\n<span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> <span class=\"hljs-title\">onchange</span> (<span class=\"hljs-params\">action, state, oldState</span>) </span>{\n  render(state)\n}\n\n<span class=\"hljs-comment\">/*\n* Render the html of the app with react\n*/</span>\n<span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> <span class=\"hljs-title\">render</span> (<span class=\"hljs-params\">state</span>) </span>{\n  <span class=\"hljs-keyword\">return</span> dom.render(react.createElement(div, state), appEl)\n}\n\n<span class=\"hljs-comment\">/*\n* Send an action to the store\n*/</span>\nsend({ type: <span class=\"hljs-string\">'example'</span>, value: <span class=\"hljs-string\">'cool'</span> })\n\n<span class=\"hljs-comment\">/*\n* Alternate `send` syntax\n*/</span>\nsend(<span class=\"hljs-string\">'example'</span>, { value: <span class=\"hljs-string\">'awesome'</span> })\n\n<span class=\"hljs-comment\">/*\n* Create a component to render\n*/</span>\n<span class=\"hljs-keyword\">var</span> div = react.createClass({\n  render: <span class=\"hljs-function\"><span class=\"hljs-keyword\">function</span> (<span class=\"hljs-params\"></span>) </span>{\n    <span class=\"hljs-keyword\">return</span> react.createElement(<span class=\"hljs-string\">'div'</span>, {}, <span class=\"hljs-keyword\">this</span>.props.value)\n  }\n})\n</code></pre>\n"}})
   app.start('#choo-root')
   
-},{"minidocs":6}]},{},[124]);
+},{"minidocs":6}]},{},[126]);
