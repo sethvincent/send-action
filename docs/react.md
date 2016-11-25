@@ -2,8 +2,6 @@
 
 This example shows using send-action with [react](http://npmjs.com/react).
 
-[![view on requirebin](http://requirebin.com/badge.png)](http://requirebin.com/?gist=8127eec940113306f6c511fd0d3148d1)
-
 ```js
 var sendAction = require('send-action')
 var dom = require('react-dom')
@@ -13,8 +11,8 @@ var react = require('react')
 * Create send function.
 */
 var send = sendAction({
-  onaction: onaction,
-  onchange: onchange,
+  onAction: onAction,
+  onChange: onChange,
   state: { value: 'ok' }
 })
 
@@ -24,16 +22,16 @@ appEl.id = 'app'
 /*
 * Set up the action handler to modify state based on the actions triggered
 */
-function onaction (action, state) {
-  if (action.type === 'example') {
-    return { value: action.value }
+function onAction (state, action, data) {
+  if (action === 'example') {
+    return { value: data }
   }
 }
 
 /*
 * Subscribe to changes to the store for rendering & logging
 */
-function onchange (action, state, oldState) {
+function onChange (state, prev) {
   render(state)
 }
 
@@ -45,14 +43,9 @@ function render (state) {
 }
 
 /*
-* Send an action to the store
+* Send an action to modify the state
 */
-send({ type: 'example', value: 'cool' })
-
-/*
-* Alternate `send` syntax
-*/
-send('example', { value: 'awesome' })
+send('example', 'awesome')
 
 /*
 * Create a component to render

@@ -1,42 +1,31 @@
-var extend = require('xtend')
+var assert = require('assert')
+var xtend = require('xtend')
 
 module.exports = function sendAction (options) {
-  if (!options) throw new Error('options required')
-  if (!options.onaction) throw new Error('options.onaction required')
-  if (!options.onchange) throw new Error('options.onchange required')
+  assert.equal(typeof options, 'object', 'options object is required')
+
   var state = options.state || {}
+  var onAction = options.onAction || options.onaction
+  var onChange = options.onChange || options.onchange
 
-  function send (action, params) {
-    process.nextTick(function () {
-      if (typeof action === 'object') {
-        params = action
-      } else if (typeof action === 'string') {
-        params = extend({ type: action }, params)
+  assert.equal(typeof state, 'object', 'options.state must be an object')
+  assert.equal(typeof onAction, 'function', 'options.onAction function is required')
+  assert.equal(typeof onChange, 'function', 'options.onChange function is required')
+
+  function send (action, data) {
+    setTimeout(function () {
+      var changes = onAction(state, action, data)
+
+      if (changes) {
+        var prev = xtend({}, state)
+        state = xtend(state, changes)
+        onChange(state, prev)
       }
-
-      var stateUpdates = options.onaction(params, state, send)
-      if (state !== stateUpdates) {
-        update(params, stateUpdates)
-      }
-    })
+    }, 0)
   }
 
-  function update (params, stateUpdates) {
-    var oldState = state
-    state = extend(state, stateUpdates)
-    options.onchange(params, state, oldState)
-  }
-
-  send.event = function sendAction_event (action, params, flag) {
-    if (typeof flag === undefined) flag = true
-    return function sendAction_send_thunk (e) {
-      if (flag && e && e.preventDefault) e.preventDefault()
-      send(action, params, flag)
-    }
-  }
-
-  send.state = function sendAction_state () {
-    return state
+  send.state = function () {
+    return xtend({}, state)
   }
 
   return send

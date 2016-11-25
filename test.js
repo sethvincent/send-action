@@ -2,38 +2,40 @@ var test = require('tape')
 var sendAction = require('./index')
 
 test('create a store', function (t) {
+  t.plan(2)
+
   var send = sendAction({
-    onaction: function (action, state) {
-      if (action.type === 'example') {
+    onAction: function (state, action, data) {
+      console.log('action', action, 'data', data)
+      if (action === 'example') {
         return { example: true }
       }
     },
-    onchange: function (action, state) {
-      t.ok(action)
-      t.ok(state)
+    onChange: function (state, prev) {
       t.ok(state.example)
+      t.ok(state)
     }
   })
 
   send('example')
-  t.end()
 })
 
 test('missing options fails', function (t) {
+  t.plan(1)
+
   try {
     sendAction()
   } catch (err) {
     t.ok(err)
-    t.equal(err.message, 'options required')
   }
-
-  t.end()
 })
 
 test('initial state', function (t) {
+  t.plan(2)
+
   var send = sendAction({
-    onaction: function (action, state) {},
-    onchange: function (action, state) {},
+    onAction: function (state, action, data) {},
+    onChange: function (state, prev) {},
     state: {
       example: true
     }
@@ -42,17 +44,18 @@ test('initial state', function (t) {
   var state = send.state()
   t.ok(state)
   t.ok(state.example)
-  t.end()
 })
 
 test('get state', function (t) {
+  t.plan(2)
+
   var send = sendAction({
-    onaction: function modifier (action, state) {
-      if (action.type === 'example') {
-        return { example: action.example }
+    onAction: function (state, action, data) {
+      if (action === 'example') {
+        return { example: data }
       }
     },
-    onchange: function (action, state) {
+    onChange: function (state, prev) {
       t.ok(state)
       t.equal(state.example, false)
     },
@@ -61,47 +64,47 @@ test('get state', function (t) {
     }
   })
 
-  send({ type: 'example', example: false })
-  t.end()
+  send('example', false)
 })
 
-test('onchange returns entire newState', function (t) {
+test('values returned in onAction extend state', function (t) {
+  t.plan(3)
+
   var send = sendAction({
     state: {
       a: 123,
       b: 456
     },
-    onaction: function modifier (action, state) {
-      return { b: action.value }
+    onAction: function (state, action, data) {
+      if (action === 'c') return { c: data }
     },
-    onchange: function (params, newState, oldState) {
-      t.ok(newState.a, 'state has no property "a"')
+    onChange: function (state, prev) {
+      t.ok(state.a, 'state has property "a"')
+      t.ok(state.b, 'state has property "b"')
+      t.equal(state.c, 789)
     }
   })
 
-  send({ value: 789 })
-  t.end()
+  send('c', 789)
 })
 
-test('only call onchange if state actually changed', function (t) {
+test('only call onChange if state actually changed', function (t) {
   t.plan(1)
 
   var send = sendAction({
     state: {
       value: 1
     },
-    onaction: function modifier (action, state) {
-      if (action.type === 'change') {
-        return { value: action.value }
-      } else if (action.type === 'no-change') {
-        return state
+    onAction: function (state, action, data) {
+      if (action === 'change') {
+        return { value: data }
       }
     },
-    onchange: function (params, newState, oldState) {
-      t.equal(newState.value, 2)
+    onChange: function (state, prev) {
+      t.equal(state.value, 2)
     }
   })
 
-  send('change', { value: 2 })
+  send('change', 2)
   send('no-change')
 })

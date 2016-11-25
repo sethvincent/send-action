@@ -2,8 +2,6 @@
 
 This example shows using send-action with [virtual-dom](http://npmjs.com/virtual-dom) and [virtual-raf](http://npmjs.com/virtual-raf).
 
-[![view on requirebin](http://requirebin.com/badge.png)](http://requirebin.com/?gist=10bb9ef42774c3fdbaa07b3e53582abe)
-
 ```js
 var sendAction = require('send-action')
 var vraf = require('virtual-raf')
@@ -14,24 +12,24 @@ var h = require('virtual-dom/h')
 * Create send function.
 */
 var send = sendAction({
-  onaction: onaction,
-  onchange: onchange,
+  onAction: onAction,
+  onChange: onChange,
   state: { value: 'ok' }
 })
 
 /*
 * Set up the action handler to modify state based on the actions triggered
 */
-function onaction (action, state) {
-  if (action.type === 'example') {
-    return { value: action.value }
+function onAction (state, action, data) {
+  if (action === 'example') {
+    return { value: data }
   }
 }
 
 /*
 * Subscribe to changes to the store for rendering & logging
 */
-function onchange (action, state, oldState) {
+function onChange (state, prev) {
   tree.update(state)
 }
 
@@ -47,14 +45,9 @@ var tree = vraf(send.state(), render, vdom)
 document.body.appendChild(tree.render())
 
 /*
-* Send an action to the store
+* Send an action to modify the state
 */
-send({ type: 'example', value: 'cool' })
-
-/*
-* Alternate `send` syntax
-*/
-send('example', { value: 'awesome' })
+send('example', 'awesome')
 
 /*
 * Create a component to render
