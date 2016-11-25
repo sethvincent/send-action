@@ -29,7 +29,6 @@
     
     <div><h1 id="using-send-action-with-virtual-dom">Using send-action with virtual-dom</h1>
 <p>This example shows using send-action with <a href="http://npmjs.com/virtual-dom">virtual-dom</a> and <a href="http://npmjs.com/virtual-raf">virtual-raf</a>.</p>
-<p><a href="http://requirebin.com/?gist=10bb9ef42774c3fdbaa07b3e53582abe"><img src="http://requirebin.com/badge.png" alt="view on requirebin"></a></p>
 <pre><code class="lang-js"><span class="hljs-keyword">var</span> sendAction = <span class="hljs-built_in">require</span>(<span class="hljs-string">'send-action'</span>)
 <span class="hljs-keyword">var</span> vraf = <span class="hljs-built_in">require</span>(<span class="hljs-string">'virtual-raf'</span>)
 <span class="hljs-keyword">var</span> vdom = <span class="hljs-built_in">require</span>(<span class="hljs-string">'virtual-dom'</span>)
@@ -39,24 +38,24 @@
 * Create send function.
 */</span>
 <span class="hljs-keyword">var</span> send = sendAction({
-  onaction: onaction,
-  onchange: onchange,
-  state: { value: <span class="hljs-string">'ok'</span> }
+  <span class="hljs-attr">onAction</span>: onAction,
+  <span class="hljs-attr">onChange</span>: onChange,
+  <span class="hljs-attr">state</span>: { <span class="hljs-attr">value</span>: <span class="hljs-string">'ok'</span> }
 })
 
 <span class="hljs-comment">/*
 * Set up the action handler to modify state based on the actions triggered
 */</span>
-<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">onaction</span> (<span class="hljs-params">action, state</span>) </span>{
-  <span class="hljs-keyword">if</span> (action.type === <span class="hljs-string">'example'</span>) {
-    <span class="hljs-keyword">return</span> { value: action.value }
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">onAction</span> (<span class="hljs-params">state, action, data</span>) </span>{
+  <span class="hljs-keyword">if</span> (action === <span class="hljs-string">'example'</span>) {
+    <span class="hljs-keyword">return</span> { <span class="hljs-attr">value</span>: data }
   }
 }
 
 <span class="hljs-comment">/*
 * Subscribe to changes to the store for rendering &amp; logging
 */</span>
-<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">onchange</span> (<span class="hljs-params">action, state, oldState</span>) </span>{
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">onChange</span> (<span class="hljs-params">state, prev</span>) </span>{
   tree.update(state)
 }
 
@@ -72,14 +71,9 @@
 <span class="hljs-built_in">document</span>.body.appendChild(tree.render())
 
 <span class="hljs-comment">/*
-* Send an action to the store
+* Send an action to modify the state
 */</span>
-send({ type: <span class="hljs-string">'example'</span>, value: <span class="hljs-string">'cool'</span> })
-
-<span class="hljs-comment">/*
-* Alternate `send` syntax
-*/</span>
-send(<span class="hljs-string">'example'</span>, { value: <span class="hljs-string">'awesome'</span> })
+send(<span class="hljs-string">'example'</span>, <span class="hljs-string">'awesome'</span>)
 
 <span class="hljs-comment">/*
 * Create a component to render

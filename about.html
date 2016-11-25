@@ -28,9 +28,11 @@
     
     
     <div><h1 id="about-send-action">About send-action</h1>
-<p><code>send-action</code> is meant to be the smallest, simplest redux-like state management library. The focus is on providing a concise method for triggering actions, and on avoiding complex middleware &amp; development dependencies.</p>
-<p>The API is significantly different from redux, but the pattern is similar. </p>
-<p>Using <code>send-action</code> you trigger actions, modify state based on those actions, and listen to the changes to render your application.</p>
+<p><a href="https://www.npmjs.com/package/send-action"><img src="https://img.shields.io/npm/v/send-action.svg?style=flat-square" alt="npm"></a>
+<a href="https://travis-ci.org/sethvincent/send-action"><img src="https://img.shields.io/travis/sethvincent/send-action.svg?style=flat-square" alt="travis"></a>
+<a href="http://npm.im/standard"><img src="https://img.shields.io/badge/code%20style-standard-brightgreen.svg?style=flat-square" alt="standard"></a>
+<a href="CONDUCT.md"><img src="https://img.shields.io/badge/code%20of%20conduct-contributor%20covenant-green.svg?style=flat-square" alt="conduct"></a></p>
+<p><code>send-action</code> is meant to be the smallest unidirectional state management module. The focus is on providing a concise method for triggering actions, and on avoiding complex plugins, middleware, &amp; development dependencies.</p>
 <h2 id="source-code">Source code</h2>
 <ul>
 <li><a href="https://github.com/sethvincent/send-action">GitHub repo</a></li>
@@ -40,29 +42,114 @@
 <pre><code class="lang-sh">npm i --save send-action
 </code></pre>
 <p>If you don&#39;t have node &amp; npm installed already, install the latest from <a href="https://nodejs.org">nodejs.org</a>.</p>
-<h2 id="basic-example">Basic example</h2>
+<h2 id="install">Install</h2>
+<pre><code class="lang-sh">npm install --save send-action
+</code></pre>
+<h2 id="minimal-example">Minimal example</h2>
 <pre><code class="lang-js"><span class="hljs-keyword">var</span> sendAction = <span class="hljs-built_in">require</span>(<span class="hljs-string">'send-action'</span>)
 
 <span class="hljs-comment">/*
 * Create send function.
 */</span>
 <span class="hljs-keyword">var</span> send = sendAction({
-  onaction: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">action, state</span>) </span>{
-    <span class="hljs-comment">// modify the state based on actions</span>
-    <span class="hljs-keyword">return</span> state
+  <span class="hljs-attr">onAction</span>: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">state, action, data</span>) </span>{
+    <span class="hljs-comment">// return a new object based on the action</span>
+    <span class="hljs-keyword">if</span> (action === <span class="hljs-string">'example'</span>) {
+      <span class="hljs-keyword">return</span> { <span class="hljs-attr">example</span>: data }
+    }
   },
-  onchange: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">action, state, oldstate</span>) </span>{
+  <span class="hljs-attr">onChange</span>: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">state, prev</span>) </span>{
     <span class="hljs-comment">// render your application</span>
-    <span class="hljs-built_in">console</span>.log(action, state, oldstate)
+    <span class="hljs-built_in">console</span>.log(state, prev)
   },
-  state: {}
+  <span class="hljs-attr">state</span>: {
+    <span class="hljs-attr">example</span>: <span class="hljs-literal">null</span>
+  }
 })
 
 <span class="hljs-comment">/*
-* Send an action to the store
+* Send an action to change the state
 */</span>
-send({ type: <span class="hljs-string">'example'</span> value: <span class="hljs-string">'cool'</span> })
+send(<span class="hljs-string">'example'</span>, <span class="hljs-string">'cool'</span>)
 </code></pre>
+<h2 id="overview">Overview</h2>
+<p>There are a few main parts of send-action to explore:</p>
+<h3 id="the-send-function">The <code>send</code> function</h3>
+<p>You create the <code>send</code> function by calling <code>sendAction</code>:</p>
+<pre><code class="lang-js"><span class="hljs-keyword">var</span> sendAction = <span class="hljs-built_in">require</span>(<span class="hljs-string">'send-action'</span>)
+
+<span class="hljs-comment">/*
+* Create send function
+*/</span>
+<span class="hljs-keyword">var</span> send = sendAction({
+  <span class="hljs-attr">onAction</span>: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">state, action, data</span>) </span>{},
+  <span class="hljs-attr">onChange</span>: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">state, prev</span>) </span>{},
+  <span class="hljs-attr">state</span>: {}
+})
+</code></pre>
+<p>You can trigger state changes by calling the <code>send</code> function.</p>
+<p><code>send</code> takes two arguments: <code>action</code> and <code>data</code>.</p>
+<p>The <code>action</code> argument must be a string.</p>
+<p>The <code>data</code> argument can be most any JavaScript value. A string, number, array or object would all be a reasonable value to use.</p>
+<p>Calling <code>send</code> looks like this:</p>
+<pre><code class="lang-js">send(<span class="hljs-string">'example'</span>, { <span class="hljs-attr">value</span>: <span class="hljs-string">'some data'</span> })
+</code></pre>
+<p>Calling <code>send</code> triggers the <code>onAction</code> handler.</p>
+<p>You might handle the above <code>send</code> call in <code>onAction</code> like this:</p>
+<pre><code class="lang-js"><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">onAction</span> (<span class="hljs-params">state, action, data</span>) </span>{
+  <span class="hljs-keyword">if</span> (action === <span class="hljs-string">'example'</span>) {
+    <span class="hljs-keyword">return</span> { <span class="hljs-attr">example</span>: data.value }
+  }
+}
+</code></pre>
+<h3 id="the-onaction-function">The <code>onAction</code> function</h3>
+<p>The <code>onAction</code> function is where you handle incoming actions and use that data to change the state.</p>
+<p>It receives three arguments: <code>state</code>, <code>action</code>, <code>data</code>.</p>
+<p>The <code>state</code> object is a copy of the current state. You can modify this object directly without making side effects to the internal state.</p>
+<p>The <code>action</code> is the string used as the first argument when calling <code>send</code>.</p>
+<p>The <code>data</code> is the value passed as the second argument to <code>send</code>.</p>
+<p>The <code>onAction</code> function is only called as a response to the <code>send</code> function.</p>
+<h4 id="returning-data-synchronously">Returning data synchronously</h4>
+<p>The logic inside of <code>onAction</code> must remain synchronous.</p>
+<p>The state will only be changed if <code>onAction</code> returns an object.</p>
+<p>If an object is returned from <code>onAction</code>:</p>
+<ul>
+<li>it will be used to extend the internal state object</li>
+<li>the <code>onChange</code> function will be called</li>
+</ul>
+<p>If an object is <strong>not</strong> returned, the <code>onChange</code> function will not be called, so the application won&#39;t rerender.</p>
+<h3 id="the-onchange-function">The <code>onChange</code> function</h3>
+<p>The <code>onChange</code> function should contain the logic to render your application.</p>
+<p>It receives two arguments: <code>state</code>, <code>prev</code>.</p>
+<p><code>state</code> is a copy of the internal state.</p>
+<p><code>prev</code> is a copy of the internal state <strong>before</strong> the last action was sent.</p>
+<h3 id="the-state-object">The <code>state</code> object</h3>
+<p>You can put any data into the <code>state</code> object.</p>
+<p>Note that it is extended shallowly. If you have an array inside the state it won&#39;t be extended. You need to handle that kind of modification carefully in the <code>onAction</code> function.</p>
+<h3 id="handling-async-actions">Handling async actions</h3>
+<p>send-action doesn&#39;t handle async actions for you in a strict way. This can be a downside if you&#39;re building a complex application, and may be a sign that another state management module may best serve your purpose.</p>
+<p>However, if you&#39;re building a small app with only a few types of state changes and a minimal amount of async actions, here&#39;s an approach you might take:</p>
+<p><strong>1.</strong> Create an <code>actions</code> object with methods that perform async actions and take a <code>done</code> callback to return either an error or results value</p>
+<pre><code class="lang-js"><span class="hljs-keyword">var</span> actions = {
+  <span class="hljs-attr">init</span>: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">done</span>) </span>{
+    <span class="hljs-built_in">document</span>.body.addEventListener(<span class="hljs-string">'click'</span>, done)
+  }
+}
+
+<span class="hljs-built_in">module</span>.exports = actions
+</code></pre>
+<p><strong>2.</strong> In your application, use the <code>actions</code> methods to trigger the async actions and use the return values to update state with <code>send</code>:</p>
+<pre><code class="lang-js">actions.init(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">e</span>) </span>{
+  send(<span class="hljs-string">'click'</span>, e)
+})
+</code></pre>
+<p>It&#39;s clear that this approach won&#39;t scale well if your application is big and/or if you&#39;re working in a large team, but in situations where you&#39;re only hitting a couple of API endpoints, I like the simplicity of this.</p>
+<h2 id="examples-with-common-ui-modules">Examples with common UI modules</h2>
+<ul>
+<li><a href="/yo-yo">yo-yo.js</a></li>
+<li><a href="/react">react</a></li>
+<li><a href="/virtual-dom">virtual-dom</a></li>
+</ul>
 </div>
   </div>
       </div>
