@@ -4,13 +4,12 @@
   "description": "simple state management",
   "main": "index.js",
   "scripts": {
+    "docs:api": "documentation build index.js -o docs/api.md -f md",
+    "docs": "npm run docs:api",
     "lint": "standard",
-    "test:node": "node test.js | tap-spec",
-    "test": "npm run lint && npm run test:node",
-    "build:local": "minidocs docs -c docs/content.json -o dist --pushstate",
-    "build:deploy": "minidocs docs -c docs/content.json -o dist --full-html",
-    "start": "budo --dir dist --pushstate",
-    "deploy": "npm run build:deploy && staticland dist/ send-action.static.land"
+    "lintfix": "standard --fix",
+    "test": "tape tests/*.js",
+    "test-lint": "npm run lint && npm run test"
   },
   "repository": {
     "type": "git",
@@ -34,16 +33,9 @@
     "xtend": "^4.0.1"
   },
   "devDependencies": {
-    "gh-pages": "^0.12.0",
-    "minidocs": "github:freeman-lab/minidocs",
-    "react": "^15.4.1",
-    "react-dom": "^15.4.1",
-    "standard": "^8.6.0",
-    "staticland": "^3.0.5",
-    "tap-spec": "^4.1.1",
-    "tape": "^4.6.3",
-    "virtual-dom": "^2.1.1",
-    "virtual-raf": "^3.0.0",
-    "yo-yo": "^1.3.1"
+    "documentation": "^11.0.1",
+    "react": "^16.8.6",
+    "standard": "^12.0.1",
+    "tape": "^4.10.2"
   }
 }

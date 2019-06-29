@@ -58,7 +58,7 @@ might detract from a friendly, safe and welcoming environment for all.
 We will exclude you from interaction if you insult, demean or harass anyone.
 That is not welcome behavior. We interpret the term "harassment" as
 including the definition in the
-[Citizen Code of Conduct](CONDUCT.md);
+[Citizen Code of Conduct](CODE_OF_CONDUCT.md);
 if you have any lack of clarity about what might be included in that concept,
 please read their definition. In particular, we don't tolerate behavior that
 excludes people in socially marginalized groups.
