@@ -25,12 +25,12 @@ npm install send-action
 ## Minimal example
 
 ```js
-const state = {
+var state = {
   items: []
 }
 
-const actions = {
-  setItem (state, data) {
+var actions = {
+  setItem: function (state, data) {
     state.items.push(data)
     return state
   }
@@ -41,7 +41,11 @@ function onChange (state, action) {
   console.log(state, action)
 }
 
-const send = createStore({ state, actions, onChange })
+var send = createStore({
+  state: state,
+  actions: actions,
+  onChange: onChange
+})
 
 send('setItem', { title: 'hi' })
 ```
