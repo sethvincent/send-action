@@ -8,6 +8,35 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 * ???
 
+## v4.0.0
+
+### Changed
+- Rewrite to support usage that looks like the following example:
+  ```js
+  const state = {
+    items: []
+  }
+
+  const actions = {
+    setItem (state, data) {
+      state.items.push(data)
+      return state
+    }
+  }
+
+  function onChange (state, action) {
+    // render app
+    console.log(state, action)
+  }
+
+  const send = createStore({ state, actions, onChange })
+
+  send('setItem', { title: 'hi' })
+  ```
+- state is now mutable
+- instead of using a `switch` statement of a bunch of `if`/`else` statements, actions are now defined as functions
+- actions can return promises
+
 ## v3.0.0
 
 ### Added

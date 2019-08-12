@@ -55,6 +55,7 @@ send('setItem', { title: 'hi' })
   - managing action functions is a little simpler
   - not returning state from an action avoids triggering the `onChange` handler
   - no way to subscribe listeners, only the `onChange` handler
+  - if you use react, you'll have an easier time using unistore as it comes with a `Provider` component
 
 ## Contributing
 
@@ -71,7 +72,6 @@ Read about the changes to this project in [CHANGELOG.md](CHANGELOG.md). The form
 ## Contact
 
 - **issues** – Please open issues in the [issues queue](https://github.com/sethvincent/send-action/issues)
-- **chat** – 
 
 ## License
 
