@@ -25,6 +25,8 @@ npm install send-action
 ## Minimal example
 
 ```js
+var createStore = require('send-action')
+
 var state = {
   items: []
 }

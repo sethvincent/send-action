@@ -13,12 +13,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ### Changed
 - Rewrite to support usage that looks like the following example:
   ```js
-  const state = {
+  var createStore = require('send-action')
+
+  var state = {
     items: []
   }
 
-  const actions = {
-    setItem (state, data) {
+  var actions = {
+    setItem: function (state, data) {
       state.items.push(data)
       return state
     }
@@ -29,7 +31,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
     console.log(state, action)
   }
 
-  const send = createStore({ state, actions, onChange })
+  var send = createStore({
+    state: state,
+    actions: actions,
+    onChange: onChange
+  })
 
   send('setItem', { title: 'hi' })
   ```
